@@ -135,6 +135,39 @@ async function api(path, { token, ...options } = {}) {
   return response.json();
 }
 
+function Modal({ open, title, onClose, onSubmit, children, submitLabel = "Create", loading = false }) {
+  if (!open) return null;
+
+  return (
+    <>
+      <button type="button" className="scrim modal-scrim" onClick={onClose} aria-label="Close modal" />
+      <div className="modal-overlay">
+        <div className="modal-card">
+          <div className="modal-header">
+            <h3>{title}</h3>
+            <button type="button" className="icon-btn" onClick={onClose}>X</button>
+          </div>
+          <form
+            className="modal-body"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmit();
+            }}
+          >
+            {children}
+            <div className="modal-actions">
+              <button type="button" className="chip" onClick={onClose}>Cancel</button>
+              <button type="submit" className="chip solid" disabled={loading}>
+                {loading ? "Working..." : submitLabel}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function AuthScreen({ onAuth }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -171,7 +204,8 @@ function AuthScreen({ onAuth }) {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <h2>{mode === "login" ? "Welcome back" : "Create an account"}</h2>
+        <div className="auth-brand">Discish</div>
+        <h2>{mode === "login" ? "Welcome back!" : "Create an account"}</h2>
         <p className="muted">
           {mode === "login"
             ? "Sign in to continue"
@@ -252,6 +286,14 @@ export default function App() {
   const [voiceDeafened, setVoiceDeafened] = useState(false);
   const [voiceMembers, setVoiceMembers] = useState([]);
   const [voiceError, setVoiceError] = useState("");
+  const [showServerModal, setShowServerModal] = useState(false);
+  const [showChannelModal, setShowChannelModal] = useState(false);
+  const [serverModalName, setServerModalName] = useState("");
+  const [channelModalName, setChannelModalName] = useState("");
+  const [channelModalType, setChannelModalType] = useState("text");
+  const [modalLoading, setModalLoading] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [memberRailOpen, setMemberRailOpen] = useState(true);
   const messageListRef = useRef(null);
   const socketRef = useRef(null);
   const roomRef = useRef(null);
@@ -449,6 +491,34 @@ export default function App() {
     loadServers();
   }, [user]);
 
+  // Handle /join/<server_id> invite links
+  useEffect(() => {
+    if (!token || !user) return;
+
+    const path = window.location.pathname;
+    const match = path.match(/^\/join\/(.+)$/);
+    if (!match) return;
+
+    const serverId = match[1];
+
+    const joinServer = async () => {
+      try {
+        const server = await api(`/servers/${serverId}/join`, {
+          method: "POST",
+          token
+        });
+        await loadServers();
+        setActiveServerId(server.id);
+      } catch (err) {
+        setError(err.message || "Failed to join server");
+      } finally {
+        window.history.replaceState(null, "", "/");
+      }
+    };
+
+    joinServer();
+  }, [token, user]);
+
   useEffect(() => {
     if (!token || !activeServerId) {
       setChannels([]);
@@ -608,46 +678,53 @@ export default function App() {
   }, [messages]);
 
   const handleCreateServer = async () => {
-    const name = window.prompt("Server name?");
-    if (!name) return;
+    if (!serverModalName.trim()) return;
+    setModalLoading(true);
     try {
       const server = await api("/servers", {
         method: "POST",
-        body: { name },
+        body: { name: serverModalName.trim() },
         token
       });
       setServers((prev) => [...prev, server]);
       setActiveServerId(server.id);
+      setShowServerModal(false);
+      setServerModalName("");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setModalLoading(false);
     }
   };
 
   const handleCreateChannel = async () => {
-    if (!activeServerId) return;
-    const name = window.prompt("Channel name?");
-    if (!name) return;
-    const requestedType = window
-      .prompt("Channel type? (text/voice)", "text")
-      ?.trim()
-      .toLowerCase();
-    const type = requestedType || "text";
-    if (type !== "text" && type !== "voice") {
-      setError('Channel type must be "text" or "voice"');
-      return;
-    }
-
+    if (!activeServerId || !channelModalName.trim()) return;
+    setModalLoading(true);
     try {
       const channel = await api(`/servers/${activeServerId}/channels`, {
         method: "POST",
-        body: { name, type },
+        body: { name: channelModalName.trim(), type: channelModalType },
         token
       });
       setChannels((prev) => [...prev, channel]);
       setActiveChannelId(channel.id);
+      setShowChannelModal(false);
+      setChannelModalName("");
+      setChannelModalType("text");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setModalLoading(false);
     }
+  };
+
+  const handleCopyInvite = () => {
+    if (!activeServerId) return;
+    const link = `${window.location.origin}/join/${activeServerId}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 2000);
+    });
   };
 
   const sendMessage = async (event) => {
@@ -688,32 +765,17 @@ export default function App() {
     return <AuthScreen onAuth={setAuthToken} />;
   }
 
-  if (servers.length === 0 && !loadingServers) {
-    return (
-      <div className="auth-screen">
-        <div className="auth-card">
-          <h2>Create your first server</h2>
-          <p className="muted">Start by creating a server for your community.</p>
-          {error ? <span className="form-error">{error}</span> : null}
-          <button className="auth-btn" type="button" onClick={handleCreateServer}>
-            Create server
-          </button>
-          <button
-            type="button"
-            className="link-btn"
-            onClick={() => setAuthToken(null)}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${memberRailOpen ? "" : "members-hidden"}`}>
       <aside className="server-rail">
-        <button type="button" className="server-btn home">
+        <button
+          type="button"
+          className={`server-btn home ${!activeServerId ? "active" : ""}`}
+          onClick={() => {
+            setActiveServerId(null);
+            setActiveChannelId(null);
+          }}
+        >
           <span className="server-badge home">DM</span>
         </button>
         <div className="server-divider" />
@@ -736,7 +798,7 @@ export default function App() {
               </span>
             </button>
           ))}
-          <button type="button" className="server-btn add" onClick={handleCreateServer}>
+          <button type="button" className="server-btn add" onClick={() => setShowServerModal(true)}>
             <span className="server-badge">+</span>
           </button>
         </div>
@@ -750,23 +812,32 @@ export default function App() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <button type="button" className="server-switch">
-            <span>{activeServer?.name || ""}</span>
+            <span>{activeServer?.name || "Discish"}</span>
             <span className="chevron">v</span>
           </button>
-          <button type="button" className="icon-btn" onClick={handleCreateChannel}>
-            +
-          </button>
+          <div className="sidebar-header-actions">
+            {activeServerId ? (
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={handleCopyInvite}
+                title="Copy invite link"
+              >
+                {inviteCopied ? "Copied!" : "Invite"}
+              </button>
+            ) : null}
+            {activeServerId ? (
+              <button type="button" className="icon-btn" onClick={() => setShowChannelModal(true)}>
+                +
+              </button>
+            ) : null}
+          </div>
         </div>
-        <p className="sidebar-tagline">{activeServer?.tagline || "Text channels"}</p>
 
         <div className="sidebar-nav">
           <button type="button" className="nav-item active">
             <span className="nav-icon">#</span>
             Channels
-          </button>
-          <button type="button" className="nav-item">
-            <span className="nav-icon">*</span>
-            Events
           </button>
         </div>
 
@@ -781,9 +852,11 @@ export default function App() {
         <div className="channel-group">
           <div className="group-row">
             <div className="group-title">Text Channels</div>
-            <button type="button" className="group-action" onClick={handleCreateChannel}>
-              +
-            </button>
+            {activeServerId ? (
+              <button type="button" className="group-action" onClick={() => setShowChannelModal(true)}>
+                +
+              </button>
+            ) : null}
           </div>
           {filteredTextChannels.map((channel) => (
             <button
@@ -809,9 +882,11 @@ export default function App() {
         <div className="channel-group">
           <div className="group-row">
             <div className="group-title">Voice Channels</div>
-            <button type="button" className="group-action" onClick={handleCreateChannel}>
-              +
-            </button>
+            {activeServerId ? (
+              <button type="button" className="group-action" onClick={() => setShowChannelModal(true)}>
+                +
+              </button>
+            ) : null}
           </div>
           {filteredVoiceChannels.map((channel) => (
             <button
@@ -835,11 +910,6 @@ export default function App() {
           {filteredVoiceChannels.length === 0 ? (
             <p className="muted">No voice channels</p>
           ) : null}
-        </div>
-
-        <div className="channel-group">
-          <div className="group-title">Direct Messages</div>
-          <p className="muted">Coming soon</p>
         </div>
 
         <div className="profile-card">
@@ -887,41 +957,56 @@ export default function App() {
           >
             Channels
           </button>
-          <div className="channel-title">
-            <span className="hash">{isVoiceChannel ? ")" : "#"}</span>
-            <div>
-              <h3>{activeChannel?.name || ""}</h3>
-              <span className="muted">
-                {isVoiceChannel ? "Voice channel" : "Text channel"}
-              </span>
+          {activeChannel ? (
+            <div className="channel-title">
+              <span className="hash">{isVoiceChannel ? ")" : "#"}</span>
+              <div>
+                <h3>{activeChannel.name}</h3>
+                <span className="muted">
+                  {isVoiceChannel ? "Voice channel" : "Text channel"}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="main-actions">
-            <button type="button" className="icon-btn">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2H9.8A2.2 2.2 0 0 0 12 22Zm7-6.2V11a7 7 0 1 0-14 0v4.8L3 17.8v1.2h18v-1.2l-2-2Z" />
-              </svg>
-            </button>
-            <button type="button" className="icon-btn">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M16 3 8 11l4 4-6 6h4l6-6 4 4 4-4-8-8Z" />
-              </svg>
-            </button>
-            <button type="button" className="icon-btn">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M8 12a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3ZM8 14c-3.3 0-6 1.6-6 3.5V20h8v-2a4 4 0 0 1 4-4h1.7A8.1 8.1 0 0 0 8 14Zm8 0a6.9 6.9 0 0 0-2.4.4A5.5 5.5 0 0 1 16 18v2h8v-2.5c0-1.9-2.7-3.5-6-3.5Z" />
-              </svg>
-            </button>
-            <div className="search-pill">
-              <input placeholder="Search" />
-              <span>s</span>
+          ) : (
+            <div className="channel-title">
+              <h3>{activeServer ? activeServer.name : "Welcome"}</h3>
             </div>
-          </div>
+          )}
+          {activeChannel ? (
+            <div className="main-actions">
+              <button
+                type="button"
+                className={`icon-btn ${memberRailOpen ? "active" : ""}`}
+                onClick={() => setMemberRailOpen((prev) => !prev)}
+                title="Toggle members"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 12a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3ZM8 14c-3.3 0-6 1.6-6 3.5V20h8v-2a4 4 0 0 1 4-4h1.7A8.1 8.1 0 0 0 8 14Zm8 0a6.9 6.9 0 0 0-2.4.4A5.5 5.5 0 0 1 16 18v2h8v-2.5c0-1.9-2.7-3.5-6-3.5Z" />
+                </svg>
+              </button>
+            </div>
+          ) : null}
         </header>
 
         {error ? <div className="system-message">{error}</div> : null}
 
-        {isVoiceChannel ? (
+        {!activeServer ? (
+          <div className="empty-state">
+            <h2>Welcome to Discish</h2>
+            <p className="muted">Join a server using an invite link, or create your own to get started.</p>
+            <button type="button" className="chip solid" onClick={() => setShowServerModal(true)}>
+              Create a Server
+            </button>
+          </div>
+        ) : !activeChannel ? (
+          <div className="empty-state">
+            <h2>No channels yet</h2>
+            <p className="muted">Create a channel to start chatting.</p>
+            <button type="button" className="chip solid" onClick={() => setShowChannelModal(true)}>
+              Create a Channel
+            </button>
+          </div>
+        ) : isVoiceChannel ? (
           <section className="voice-stage">
             <div className="voice-card">
               <div>
@@ -1041,26 +1126,12 @@ export default function App() {
             </section>
 
             <form className="composer" onSubmit={sendMessage}>
-              <button type="button" className="composer-btn">
-                +
-              </button>
               <div className="composer-field">
                 <input
                   value={composer}
                   onChange={(event) => setComposer(event.target.value)}
-                  placeholder="Message"
+                  placeholder={`Message #${activeChannel?.name || ""}`}
                 />
-                <div className="composer-icons">
-                  <button type="button" className="icon-btn ghost">
-                    GIF
-                  </button>
-                  <button type="button" className="icon-btn ghost">
-                    :)
-                  </button>
-                  <button type="button" className="icon-btn ghost">
-                    +
-                  </button>
-                </div>
               </div>
               <button type="submit" className="send-btn" aria-label="Send">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1072,38 +1143,40 @@ export default function App() {
         )}
       </main>
 
-      <aside className="member-rail">
-        <div className="member-header">
-          <div>
-            <p className="eyebrow">Members</p>
-            <h4>{members.length} total</h4>
-          </div>
-        </div>
-
-        <div className="member-group">
-          {members.map((member) => (
-            <div key={member.id} className="member-row">
-              <div className="avatar-wrap">
-                <span
-                  className="avatar small"
-                  style={{ background: pickColor(member.username) }}
-                >
-                  {initialsFromName(member.username)}
-                </span>
-                <span
-                  className={`status-dot ${
-                    member.id === user.id ? "online" : "offline"
-                  }`}
-                />
-              </div>
-              <div>
-                <p>{member.username}</p>
-                <span className="muted">{member.role}</span>
-              </div>
+      {memberRailOpen ? (
+        <aside className="member-rail">
+          <div className="member-header">
+            <div>
+              <p className="eyebrow">Members</p>
+              <h4>{members.length} total</h4>
             </div>
-          ))}
-        </div>
-      </aside>
+          </div>
+
+          <div className="member-group">
+            {members.map((member) => (
+              <div key={member.id} className="member-row">
+                <div className="avatar-wrap">
+                  <span
+                    className="avatar small"
+                    style={{ background: pickColor(member.username) }}
+                  >
+                    {initialsFromName(member.username)}
+                  </span>
+                  <span
+                    className={`status-dot ${
+                      member.id === user.id ? "online" : "offline"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <p>{member.username}</p>
+                  <span className="muted">{member.role}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+      ) : null}
 
       {sidebarOpen ? (
         <button
@@ -1113,6 +1186,69 @@ export default function App() {
           aria-label="Close sidebar"
         />
       ) : null}
+
+      <Modal
+        open={showServerModal}
+        title="Create a Server"
+        onClose={() => { setShowServerModal(false); setServerModalName(""); }}
+        onSubmit={handleCreateServer}
+        submitLabel="Create"
+        loading={modalLoading}
+      >
+        <label>
+          Server Name
+          <input
+            value={serverModalName}
+            onChange={(e) => setServerModalName(e.target.value)}
+            placeholder="My Awesome Server"
+            autoFocus
+            required
+          />
+        </label>
+      </Modal>
+
+      <Modal
+        open={showChannelModal}
+        title="Create a Channel"
+        onClose={() => {
+          setShowChannelModal(false);
+          setChannelModalName("");
+          setChannelModalType("text");
+        }}
+        onSubmit={handleCreateChannel}
+        submitLabel="Create"
+        loading={modalLoading}
+      >
+        <label>
+          Channel Name
+          <input
+            value={channelModalName}
+            onChange={(e) => setChannelModalName(e.target.value)}
+            placeholder="general"
+            autoFocus
+            required
+          />
+        </label>
+        <label>
+          Channel Type
+          <div className="modal-type-group">
+            <button
+              type="button"
+              className={`modal-type-option ${channelModalType === "text" ? "selected" : ""}`}
+              onClick={() => setChannelModalType("text")}
+            >
+              # Text
+            </button>
+            <button
+              type="button"
+              className={`modal-type-option ${channelModalType === "voice" ? "selected" : ""}`}
+              onClick={() => setChannelModalType("voice")}
+            >
+              ) Voice
+            </button>
+          </div>
+        </label>
+      </Modal>
     </div>
   );
 }
