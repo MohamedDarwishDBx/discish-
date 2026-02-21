@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap");
 
 :root {
   color-scheme: dark;
@@ -24,7 +24,7 @@
 
 body {
   margin: 0;
-  font-family: "Figtree", "Segoe UI", sans-serif;
+  font-family: "DM Sans", "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--text-normal);
   min-height: 100vh;
