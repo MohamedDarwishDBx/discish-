@@ -223,7 +223,7 @@ function LandingPage({ onOpenApp }) {
             </svg>
           </div>
           <div className="hero-founder">
-            <img src="/founder.png" alt="Mohamed Darwish — Founder" className="founder-photo" />
+            <img src="/founder.jpg" alt="Mohamed Darwish — Founder" className="founder-photo" />
             <div className="founder-label">
               <span className="founder-name">Mohamed Darwish</span>
               <span className="founder-role">Founder</span>
