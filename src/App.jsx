@@ -215,12 +215,7 @@ function LandingPage({ onOpenApp }) {
         </div>
         <div className="hero-visual">
           <div className="hero-logo-card">
-            <svg className="discish-logo-icon" viewBox="0 0 256 256" aria-hidden="true">
-              <rect width="256" height="256" rx="48" fill="#5865f2" />
-              <path d="M178.7 82.5c-12.2-5.6-25.2-9.6-38.7-11.8a.7.7 0 0 0-.7.3c-1.7 3-3.5 6.9-4.8 10a142 142 0 0 0-42.6 0c-1.3-3.2-3.2-7-4.9-10a.7.7 0 0 0-.7-.3c-13.5 2.2-26.5 6.2-38.7 11.8a.6.6 0 0 0-.3.3C27.5 112.5 22.3 141.5 24.9 170a.8.8 0 0 0 .3.5c16 11.7 31.4 18.9 46.6 23.6a.7.7 0 0 0 .8-.3c3.6-4.9 6.8-10 9.5-15.4a.7.7 0 0 0-.4-1c-5-1.9-9.9-4.2-14.5-6.8a.7.7 0 0 1-.1-1.2c1-.7 2-1.5 2.9-2.3a.7.7 0 0 1 .7-.1c30.4 13.9 63.4 13.9 93.4 0a.7.7 0 0 1 .7.1c1 .8 1.9 1.6 2.9 2.3a.7.7 0 0 1 0 1.2c-4.6 2.7-9.5 4.9-14.5 6.8a.7.7 0 0 0-.4 1c2.8 5.4 6 10.5 9.5 15.4a.7.7 0 0 0 .8.3c15.3-4.7 30.7-11.9 46.7-23.6a.7.7 0 0 0 .3-.5c3.1-32.1-5.2-60-22-84.8a.6.6 0 0 0-.3-.2ZM99.3 152.8c-7.3 0-13.4-6.7-13.4-15s5.9-15 13.4-15 13.5 6.8 13.4 15-6 15-13.4 15Zm49.5 0c-7.4 0-13.5-6.7-13.5-15s6-15 13.5-15 13.4 6.8 13.4 15-6 15-13.4 15Z" fill="#fff" />
-              <circle cx="208" cy="56" r="22" fill="#57f287" />
-              <text x="208" y="63" textAnchor="middle" fill="#fff" fontSize="22" fontWeight="700" fontFamily="sans-serif">~</text>
-            </svg>
+            <img src="/logo.png" alt="Discish" className="discish-logo-img" />
           </div>
           <div className="hero-founder">
             <img src="/founder.jpg" alt="Mohamed Darwish — Founder" className="founder-photo" />
