@@ -180,7 +180,7 @@ function LandingPage({ onOpenApp }) {
       </div>
 
       <nav className="landing-nav">
-        <div className="landing-logo">Discish</div>
+        <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish</div>
         <div className="landing-links">
           <a href="#features">Features</a>
           <a href="#safety">Safety</a>
@@ -252,7 +252,7 @@ function LandingPage({ onOpenApp }) {
       </section>
 
       <footer className="landing-footer">
-        <div className="landing-logo">Discish</div>
+        <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish</div>
         <p>A Discord-inspired chat platform. Built for fun.</p>
       </footer>
     </div>
