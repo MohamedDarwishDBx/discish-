@@ -1,0 +1,12 @@
+{
+  email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy app:8000
+}
+
+{$LIVEKIT_DOMAIN} {
+  reverse_proxy livekit:7880
+}

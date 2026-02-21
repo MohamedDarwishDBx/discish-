@@ -1,0 +1,26 @@
+port: 7880
+bind_addresses:
+  - 0.0.0.0
+
+log_level: info
+
+rtc:
+  tcp_port: ${RTC_TCP_PORT}
+  port_range_start: ${RTC_PORT_RANGE_START}
+  port_range_end: ${RTC_PORT_RANGE_END}
+  use_external_ip: ${RTC_USE_EXTERNAL_IP}
+
+redis:
+  address: livekit-redis:6379
+
+keys:
+  ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+
+turn:
+  enabled: ${TURN_ENABLED}
+  domain: ${TURN_DOMAIN}
+  udp_port: ${TURN_UDP_PORT}
+  tls_port: ${TURN_TLS_PORT}
+
+room:
+  auto_create: true

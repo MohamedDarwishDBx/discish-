@@ -1,0 +1,29 @@
+databases:
+  - name: discordclone-db
+    databaseName: discordclone
+    user: discordclone
+
+services:
+  - type: web
+    name: discordclone-app
+    runtime: docker
+    dockerfilePath: ./Dockerfile.app
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: discordclone-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_MIN
+        value: "4320"
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: LIVEKIT_TOKEN_TTL_MIN
+        value: "240"

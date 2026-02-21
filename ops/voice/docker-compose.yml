@@ -1,0 +1,55 @@
+services:
+  livekit-redis:
+    image: redis:7-alpine
+    container_name: discordclone-livekit-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - livekit_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  livekit:
+    image: livekit/livekit-server:v1.8.4
+    container_name: discordclone-livekit
+    restart: unless-stopped
+    command: ["--config", "/etc/livekit/livekit.yaml"]
+    env_file:
+      - .env
+    environment:
+      - NODE_IP=${NODE_IP}
+    depends_on:
+      livekit-redis:
+        condition: service_healthy
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "5349:5349/tcp"
+    volumes:
+      - ./livekit.generated.yaml:/etc/livekit/livekit.yaml:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:7880/ | grep -qi ok || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  livekit_redis_data:
