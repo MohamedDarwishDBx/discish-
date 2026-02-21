@@ -193,16 +193,16 @@ function LandingPage({ onOpenApp }) {
 
       <section className="landing-hero">
         <div className="hero-content">
-          <h1 className="landing-headline">
-            GROUP CHAT<br />
-            THAT'S ALL<br />
-            FUN &amp; GAMES
-          </h1>
-          <p className="landing-subtitle">
-            Discish is great for playing games and chilling with friends, or even
-            building a worldwide community. Customize your own space to talk,
-            play, and hang out.
-          </p>
+        <h1 className="landing-headline">
+          Discish —<br />
+          Discord El<br />
+          Ghalaba 🇪🇬
+        </h1>
+        <p className="landing-subtitle">
+          Discish is great for playing games and chilling with friends, or even
+          building a worldwide community. Customize your own space to talk,
+          play, and hang out.
+        </p>
           <div className="landing-ctas">
             <button type="button" className="landing-btn secondary" onClick={onOpenApp}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11V3H8v6H2v12h20V11h-6Zm-6-6h4v14h-4V5ZM4 11h4v8H4v-8Zm16 8h-4v-6h4v6Z" /></svg>
