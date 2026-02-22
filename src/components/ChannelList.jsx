@@ -5,6 +5,7 @@ export default function ChannelList({
   voiceConnected,
   voiceChannelId,
   activeServerId,
+  unreadCounts,
   onSelectChannel,
   onCreateChannel,
 }) {
@@ -17,17 +18,21 @@ export default function ChannelList({
             <button type="button" className="group-action" onClick={onCreateChannel}>+</button>
           ) : null}
         </div>
-        {textChannels.map((channel) => (
-          <button
-            key={channel.id}
-            type="button"
-            className={`channel ${channel.id === activeChannelId ? "active" : ""}`}
-            onClick={() => onSelectChannel(channel.id)}
-          >
-            <span className="channel-icon">#</span>
-            <span className="channel-name">{channel.name}</span>
-          </button>
-        ))}
+        {textChannels.map((channel) => {
+          const unread = unreadCounts?.[channel.id] || 0;
+          return (
+            <button
+              key={channel.id}
+              type="button"
+              className={`channel ${channel.id === activeChannelId ? "active" : ""} ${unread > 0 ? "unread" : ""}`}
+              onClick={() => onSelectChannel(channel.id)}
+            >
+              <span className="channel-icon">#</span>
+              <span className="channel-name">{channel.name}</span>
+              {unread > 0 ? <span className="unread-badge">{unread > 99 ? "99+" : unread}</span> : null}
+            </button>
+          );
+        })}
         {textChannels.length === 0 ? <p className="muted">No text channels</p> : null}
       </div>
 

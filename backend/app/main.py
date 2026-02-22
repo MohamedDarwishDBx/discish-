@@ -24,7 +24,7 @@ from .auth import (
     verify_password,
 )
 from .db import Base, SessionLocal, engine, get_db
-from .models import Channel, DMChannelMember, Friendship, Message, Reaction, Server, ServerMembership, User
+from .models import Channel, DMChannelMember, Friendship, Message, Reaction, ReadReceipt, Server, ServerMembership, User
 from .schemas import (
     ChannelCreate,
     ChannelOut,
@@ -54,6 +54,8 @@ load_dotenv()
 
 app = FastAPI(title="Discord-like API", version="0.1.0")
 manager = ConnectionManager()
+_presence: dict[str, str] = {}
+_presence_sockets: set[WebSocket] = set()
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DIST_DIR = PROJECT_ROOT / "dist"
 INDEX_FILE = DIST_DIR / "index.html"
@@ -902,6 +904,87 @@ def delete_message(
         pass
 
 
+@app.post("/channels/{channel_id}/read", status_code=204)
+def mark_channel_read(
+    channel_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    channel = db.get(Channel, channel_id)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    require_channel_access(db, current_user.id, channel)
+
+    existing = db.scalar(
+        select(ReadReceipt).where(
+            (ReadReceipt.user_id == current_user.id)
+            & (ReadReceipt.channel_id == channel_id)
+        )
+    )
+    if existing:
+        existing.last_read_at = dt.datetime.now(dt.timezone.utc)
+    else:
+        db.add(ReadReceipt(
+            user_id=current_user.id,
+            channel_id=channel_id,
+            last_read_at=dt.datetime.now(dt.timezone.utc),
+        ))
+    db.commit()
+
+
+@app.get("/channels/unread")
+def get_unread_counts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from sqlalchemy import func as sa_func
+
+    receipts = db.execute(
+        select(ReadReceipt.channel_id, ReadReceipt.last_read_at)
+        .where(ReadReceipt.user_id == current_user.id)
+    ).all()
+    receipt_map = {r.channel_id: r.last_read_at for r in receipts}
+
+    # Get channels the user has access to (server channels + DMs)
+    from .models import DMChannelMember, ServerMembership
+
+    server_channel_ids = db.scalars(
+        select(Channel.id)
+        .join(Server, Channel.server_id == Server.id)
+        .join(ServerMembership, ServerMembership.server_id == Server.id)
+        .where(ServerMembership.user_id == current_user.id)
+        .where(Channel.type == "text")
+    ).all()
+
+    dm_channel_ids = db.scalars(
+        select(DMChannelMember.channel_id)
+        .where(DMChannelMember.user_id == current_user.id)
+    ).all()
+
+    all_channel_ids = list(set(server_channel_ids + dm_channel_ids))
+
+    result = {}
+    for ch_id in all_channel_ids:
+        last_read = receipt_map.get(ch_id)
+        if last_read:
+            count = db.scalar(
+                select(sa_func.count(Message.id))
+                .where(Message.channel_id == ch_id)
+                .where(Message.created_at > last_read)
+                .where(Message.author_id != current_user.id)
+            )
+        else:
+            count = db.scalar(
+                select(sa_func.count(Message.id))
+                .where(Message.channel_id == ch_id)
+                .where(Message.author_id != current_user.id)
+            )
+        if count and count > 0:
+            result[ch_id] = count
+
+    return result
+
+
 def _aggregate_reactions(message: Message, db: Session) -> list[dict]:
     reactions = db.scalars(
         select(Reaction).where(Reaction.message_id == message.id)
@@ -1081,6 +1164,68 @@ async def channel_socket(
         db.close()
 
 
+@app.websocket("/ws/presence")
+async def presence_socket(
+    websocket: WebSocket,
+    token: Annotated[str, Query()],
+) -> None:
+    db = SessionLocal()
+    try:
+        user = get_user_from_token(token, db)
+        if not user:
+            await websocket.close(code=1008)
+            return
+
+        await websocket.accept()
+        _presence[user.id] = "online"
+        _presence_sockets.add(websocket)
+
+        # Broadcast this user came online
+        status_payload = {"event": "presence.update", "user_id": user.id, "status": "online"}
+        for ws in list(_presence_sockets):
+            if ws is not websocket:
+                try:
+                    await ws.send_json(status_payload)
+                except Exception:
+                    _presence_sockets.discard(ws)
+
+        try:
+            while True:
+                raw = await websocket.receive_text()
+                try:
+                    import json
+                    data = json.loads(raw)
+                    if data.get("event") == "presence.update" and data.get("status") in ("online", "idle", "dnd", "offline"):
+                        _presence[user.id] = data["status"]
+                        payload = {"event": "presence.update", "user_id": user.id, "status": data["status"]}
+                        for ws in list(_presence_sockets):
+                            if ws is not websocket:
+                                try:
+                                    await ws.send_json(payload)
+                                except Exception:
+                                    _presence_sockets.discard(ws)
+                except (json.JSONDecodeError, KeyError):
+                    pass
+        except WebSocketDisconnect:
+            pass
+        finally:
+            _presence_sockets.discard(websocket)
+            _presence[user.id] = "offline"
+            offline_payload = {"event": "presence.update", "user_id": user.id, "status": "offline"}
+            for ws in list(_presence_sockets):
+                try:
+                    await ws.send_json(offline_payload)
+                except Exception:
+                    _presence_sockets.discard(ws)
+    finally:
+        db.close()
+
+
+@app.get("/presence")
+def get_presence(current_user: User = Depends(get_current_user)):
+    return {uid: status for uid, status in _presence.items() if status != "offline"}
+
+
 @app.get("/", include_in_schema=False)
 async def serve_root() -> FileResponse:
     if not INDEX_FILE.exists():
@@ -1105,6 +1250,7 @@ async def serve_spa(full_path: str) -> FileResponse:
         "friends",
         "upload",
         "uploads",
+        "presence",
     }
     first_segment = full_path.split("/", 1)[0]
     if first_segment in blocked_prefixes:

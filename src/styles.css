@@ -878,6 +878,22 @@ input {
   font-size: 14px;
 }
 
+.channel.unread .channel-name {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.unread-badge {
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 999px;
+  min-width: 16px;
+  text-align: center;
+}
+
 .pill {
   padding: 2px 7px;
   border-radius: 999px;
@@ -921,6 +937,10 @@ input {
 
 .status-dot.offline {
   background: #4e5058;
+}
+
+.status-dot.dnd {
+  background: var(--danger);
 }
 
 .dm-list {

@@ -62,8 +62,11 @@ export default function App() {
   const [dmSearchQuery, setDmSearchQuery] = useState("");
   const [dmSearchResults, setDmSearchResults] = useState([]);
   const [profilePopupUser, setProfilePopupUser] = useState(null);
+  const [presenceMap, setPresenceMap] = useState({});
+  const [unreadCounts, setUnreadCounts] = useState({});
   const messageListRef = useRef(null);
   const socketRef = useRef(null);
+  const presenceSocketRef = useRef(null);
   const roomRef = useRef(null);
   const audioSinkRef = useRef(null);
   const voiceDeafenedRef = useRef(false);
@@ -260,6 +263,36 @@ export default function App() {
 
   useEffect(() => { if (user) loadServers(); }, [user]);
 
+  useEffect(() => {
+    if (!token || !user) return;
+    api("/presence", { token }).then((data) => setPresenceMap(data)).catch(() => {});
+    const ws = new WebSocket(`${WS_URL}/ws/presence?token=${token}`);
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.event === "presence.update") {
+        setPresenceMap((prev) => ({ ...prev, [data.user_id]: data.status }));
+      }
+    };
+    presenceSocketRef.current = ws;
+    return () => { ws.close(); presenceSocketRef.current = null; };
+  }, [token, user]);
+
+  const loadUnreadCounts = async () => {
+    if (!token) return;
+    try {
+      const data = await api("/channels/unread", { token });
+      setUnreadCounts(data);
+    } catch (err) { /* ignore */ }
+  };
+
+  useEffect(() => { if (user) loadUnreadCounts(); }, [user]);
+
+  useEffect(() => {
+    if (!activeChannelId || !token) return;
+    api(`/channels/${activeChannelId}/read`, { method: "POST", token }).catch(() => {});
+    setUnreadCounts((prev) => { const next = { ...prev }; delete next[activeChannelId]; return next; });
+  }, [activeChannelId, token]);
+
   const loadDMChannels = async () => {
     if (!token) return;
     try {
@@ -338,6 +371,7 @@ export default function App() {
       const payload = JSON.parse(event.data);
       if (payload.event === "message.created") {
         setMessages((prev) => prev.some((m) => m.id === payload.id) ? prev : [...prev, payload]);
+        api(`/channels/${activeChannelId}/read`, { method: "POST", token }).catch(() => {});
       } else if (payload.event === "message.updated") {
         setMessages((prev) => prev.map((m) => m.id === payload.id ? { ...m, content: payload.content, edited_at: payload.edited_at } : m));
       } else if (payload.event === "message.deleted") {
@@ -558,6 +592,7 @@ export default function App() {
               voiceConnected={voiceConnected}
               voiceChannelId={voiceChannelId}
               activeServerId={activeServerId}
+              unreadCounts={unreadCounts}
               onSelectChannel={(id) => { setActiveChannelId(id); setActiveDM(null); setSidebarOpen(false); }}
               onCreateChannel={() => setShowChannelModal(true)}
             />
@@ -698,6 +733,7 @@ export default function App() {
         <MemberRail
           members={members}
           currentUserId={user.id}
+          presenceMap={presenceMap}
           onClickMember={(member) => setProfilePopupUser({ id: member.id, username: member.username, email: "", avatar_url: null, bio: null, banner_color: null })}
         />
       ) : null}

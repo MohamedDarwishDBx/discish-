@@ -152,3 +152,13 @@ class Friendship(Base):
 
     requester: Mapped["User"] = relationship(foreign_keys=[requester_id])
     addressee: Mapped["User"] = relationship(foreign_keys=[addressee_id])
+
+
+class ReadReceipt(Base):
+    __tablename__ = "read_receipts"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    channel_id: Mapped[str] = mapped_column(ForeignKey("channels.id"), primary_key=True)
+    last_read_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

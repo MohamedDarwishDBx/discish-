@@ -1,6 +1,15 @@
 import { pickColor, initialsFromName } from "../utils/helpers";
 
-export default function MemberRail({ members, currentUserId, onClickMember }) {
+function presenceClass(userId, currentUserId, presenceMap) {
+  if (userId === currentUserId) return "online";
+  const status = presenceMap?.[userId];
+  if (status === "online") return "online";
+  if (status === "idle") return "idle";
+  if (status === "dnd") return "dnd";
+  return "offline";
+}
+
+export default function MemberRail({ members, currentUserId, presenceMap, onClickMember }) {
   return (
     <aside className="member-rail">
       <div className="member-header">
@@ -25,9 +34,7 @@ export default function MemberRail({ members, currentUserId, onClickMember }) {
               >
                 {initialsFromName(member.username)}
               </span>
-              <span
-                className={`status-dot ${member.id === currentUserId ? "online" : "offline"}`}
-              />
+              <span className={`status-dot ${presenceClass(member.id, currentUserId, presenceMap)}`} />
             </div>
             <div>
               <p>{member.username}</p>
