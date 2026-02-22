@@ -1,3 +1,5 @@
+import { CloseIcon } from "./Icons";
+
 export default function Modal({ open, title, onClose, onSubmit, children, submitLabel = "Create", loading = false }) {
   if (!open) return null;
 
@@ -8,7 +10,7 @@ export default function Modal({ open, title, onClose, onSubmit, children, submit
         <div className="modal-card">
           <div className="modal-header">
             <h3>{title}</h3>
-            <button type="button" className="icon-btn" onClick={onClose}>X</button>
+            <button type="button" className="icon-btn" onClick={onClose}><CloseIcon size={18} /></button>
           </div>
           <form
             className="modal-body"

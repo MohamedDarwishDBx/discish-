@@ -27,6 +27,16 @@ import DMList from "./components/DMList";
 import FriendsList from "./components/FriendsList";
 import UserProfilePopup from "./components/UserProfilePopup";
 import ServerSettings from "./components/ServerSettings";
+import {
+  ChevronDownIcon,
+  InviteIcon,
+  PlusIcon,
+  HashIcon,
+  VoiceIcon,
+  MenuIcon,
+  AtIcon,
+  SearchIcon,
+} from "./components/Icons";
 
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
@@ -579,16 +589,16 @@ export default function App() {
             onClick={() => { if (activeServerId) setShowServerSettings(true); }}
           >
             <span>{activeServer?.name || "Direct Messages"}</span>
-            {activeServerId ? <span className="chevron">v</span> : null}
+            {activeServerId ? <span className="chevron"><ChevronDownIcon size={16} /></span> : null}
           </button>
           <div className="sidebar-header-actions">
             {activeServerId ? (
               <button type="button" className="icon-btn" onClick={handleCopyInvite} title="Copy invite link">
-                {inviteCopied ? "Copied!" : "Invite"}
+                {inviteCopied ? "Copied!" : <InviteIcon size={18} />}
               </button>
             ) : null}
             {activeServerId ? (
-              <button type="button" className="icon-btn" onClick={() => setShowChannelModal(true)}>+</button>
+              <button type="button" className="icon-btn" onClick={() => setShowChannelModal(true)}><PlusIcon size={18} /></button>
             ) : null}
           </div>
         </div>
@@ -597,12 +607,13 @@ export default function App() {
           <>
             <div className="sidebar-nav">
               <button type="button" className="nav-item active">
-                <span className="nav-icon">#</span>
+                <span className="nav-icon"><HashIcon size={16} /></span>
                 Channels
               </button>
             </div>
 
             <div className="sidebar-search">
+              <SearchIcon size={16} />
               <input
                 value={channelSearch}
                 onChange={(e) => setChannelSearch(e.target.value)}
@@ -659,11 +670,11 @@ export default function App() {
       <main className="main">
         <header className="main-header">
           <button type="button" className="icon-btn mobile-only" onClick={() => setSidebarOpen((p) => !p)}>
-            Channels
+            <MenuIcon size={20} />
           </button>
           {activeDM && !activeServerId ? (
             <div className="channel-title">
-              <span className="hash">@</span>
+              <span className="hash"><AtIcon size={20} /></span>
               <div>
                 <h3>{activeDM.recipient.username}</h3>
                 <span className="muted">Direct Message</span>
@@ -671,7 +682,7 @@ export default function App() {
             </div>
           ) : activeChannel ? (
             <div className="channel-title">
-              <span className="hash">{isVoiceChannel ? ")" : "#"}</span>
+              <span className="hash">{isVoiceChannel ? <VoiceIcon size={20} /> : <HashIcon size={20} />}</span>
               <div>
                 <h3>{activeChannel.name}</h3>
                 <span className="muted">{isVoiceChannel ? "Voice channel" : "Text channel"}</span>
@@ -798,8 +809,8 @@ export default function App() {
         <label>
           Channel Type
           <div className="modal-type-group">
-            <button type="button" className={`modal-type-option ${channelModalType === "text" ? "selected" : ""}`} onClick={() => setChannelModalType("text")}># Text</button>
-            <button type="button" className={`modal-type-option ${channelModalType === "voice" ? "selected" : ""}`} onClick={() => setChannelModalType("voice")}>) Voice</button>
+            <button type="button" className={`modal-type-option ${channelModalType === "text" ? "selected" : ""}`} onClick={() => setChannelModalType("text")}><HashIcon size={16} /> Text</button>
+            <button type="button" className={`modal-type-option ${channelModalType === "voice" ? "selected" : ""}`} onClick={() => setChannelModalType("voice")}><VoiceIcon size={16} /> Voice</button>
           </div>
         </label>
       </Modal>

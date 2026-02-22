@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { api } from "../utils/api";
 import { pickColor, initialsFromName } from "../utils/helpers";
+import { CloseIcon } from "./Icons";
+import Modal from "./Modal";
 
 const ROLE_RANK = { owner: 4, admin: 3, moderator: 2, member: 1 };
 const ROLE_OPTIONS = ["admin", "moderator", "member"];
@@ -20,6 +22,7 @@ export default function ServerSettings({
   const [name, setName] = useState(server.name);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const myMember = members.find((m) => m.id === currentUserId);
   const myRole = myMember?.role || "member";
@@ -39,7 +42,6 @@ export default function ServerSettings({
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete this server? This cannot be undone.")) return;
     try {
       await api(`/servers/${server.id}`, { method: "DELETE", token });
       onServerDeleted(server.id);
@@ -47,7 +49,6 @@ export default function ServerSettings({
   };
 
   const handleLeave = async () => {
-    if (!confirm("Leave this server?")) return;
     try {
       await api(`/servers/${server.id}/leave`, { method: "POST", token });
       onLeft(server.id);
@@ -64,7 +65,6 @@ export default function ServerSettings({
   };
 
   const handleKick = async (memberId) => {
-    if (!confirm("Kick this member?")) return;
     try {
       await api(`/servers/${server.id}/members/${memberId}`, { method: "DELETE", token });
       onMembersUpdated();
@@ -75,7 +75,7 @@ export default function ServerSettings({
     <div className="settings-panel">
       <div className="settings-header">
         <h2>{server.name} — Settings</h2>
-        <button type="button" className="icon-btn" onClick={onClose}>X</button>
+        <button type="button" className="icon-btn" onClick={onClose}><CloseIcon size={18} /></button>
       </div>
 
       <div className="settings-tabs">
@@ -104,9 +104,21 @@ export default function ServerSettings({
           <hr className="settings-divider" />
 
           {myRole === "owner" ? (
-            <button type="button" className="chip danger-btn" onClick={handleDelete}>Delete Server</button>
+            <button
+              type="button"
+              className="chip danger-btn"
+              onClick={() => setConfirmAction({ type: "delete" })}
+            >
+              Delete Server
+            </button>
           ) : (
-            <button type="button" className="chip" onClick={handleLeave}>Leave Server</button>
+            <button
+              type="button"
+              className="chip"
+              onClick={() => setConfirmAction({ type: "leave" })}
+            >
+              Leave Server
+            </button>
           )}
         </div>
       ) : (
@@ -133,13 +145,49 @@ export default function ServerSettings({
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
-                  <button type="button" className="chip danger-btn" onClick={() => handleKick(m.id)}>Kick</button>
+                  <button
+                    type="button"
+                    className="chip danger-btn"
+                    onClick={() => setConfirmAction({ type: "kick", memberId: m.id, memberName: m.username })}
+                  >
+                    Kick
+                  </button>
                 </div>
               ) : null}
             </div>
           ))}
         </div>
       )}
+
+      <Modal
+        open={confirmAction?.type === "delete"}
+        title="Delete Server"
+        onClose={() => setConfirmAction(null)}
+        onSubmit={() => { handleDelete(); setConfirmAction(null); }}
+        submitLabel="Delete"
+      >
+        <p>Are you sure you want to delete <strong>{server.name}</strong>? This cannot be undone.</p>
+      </Modal>
+
+      <Modal
+        open={confirmAction?.type === "leave"}
+        title="Leave Server"
+        onClose={() => setConfirmAction(null)}
+        onSubmit={() => { handleLeave(); setConfirmAction(null); }}
+        submitLabel="Leave"
+      >
+        <p>Are you sure you want to leave <strong>{server.name}</strong>?</p>
+      </Modal>
+
+      <Modal
+        open={confirmAction?.type === "kick"}
+        title="Kick Member"
+        onClose={() => setConfirmAction(null)}
+        onSubmit={() => { handleKick(confirmAction.memberId); setConfirmAction(null); }}
+        submitLabel="Kick"
+      >
+        <p>Are you sure you want to kick <strong>{confirmAction?.memberName}</strong>?</p>
+      </Modal>
     </div>
   );
 }

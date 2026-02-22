@@ -1,3 +1,5 @@
+import { VoiceIcon } from "./Icons";
+
 export default function VoiceStatusBar({ channel, onGoToChannel, onDisconnect }) {
   return (
     <div className="voice-status-bar">
@@ -10,7 +12,7 @@ export default function VoiceStatusBar({ channel, onGoToChannel, onDisconnect })
             className="voice-status-channel"
             onClick={onGoToChannel}
           >
-            ) {channel.name}
+            <VoiceIcon size={14} /> {channel.name}
           </button>
         </div>
       </div>

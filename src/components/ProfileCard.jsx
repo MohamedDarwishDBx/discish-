@@ -1,4 +1,5 @@
 import { pickColor, initialsFromName } from "../utils/helpers";
+import { MicIcon, MicOffIcon, HeadphonesIcon, DeafenIcon } from "./Icons";
 
 export default function ProfileCard({
   user,
@@ -32,16 +33,18 @@ export default function ProfileCard({
           className={`icon-btn ${voiceMuted ? "active" : ""}`}
           onClick={onToggleMute}
           disabled={!voiceConnected}
+          title={voiceMuted ? "Unmute" : "Mute"}
         >
-          Mic
+          {voiceMuted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
         </button>
         <button
           type="button"
           className={`icon-btn ${voiceDeafened ? "active" : ""}`}
           onClick={onToggleDeafen}
           disabled={!voiceConnected}
+          title={voiceDeafened ? "Undeafen" : "Deafen"}
         >
-          Deafen
+          {voiceDeafened ? <DeafenIcon size={18} /> : <HeadphonesIcon size={18} />}
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { pickColor, initialsFromName } from "../utils/helpers";
+import { PlusIcon } from "./Icons";
 
 export default function DMList({
   dmChannels,
@@ -23,7 +24,7 @@ export default function DMList({
           onClick={() => setShowSearch((p) => !p)}
           title="New DM"
         >
-          +
+          <PlusIcon size={16} />
         </button>
       </div>
 

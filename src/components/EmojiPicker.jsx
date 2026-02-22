@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CloseIcon } from "./Icons";
 
 const COMMON_EMOJIS = [
   "\u{1F44D}", "\u{1F44E}", "\u{2764}\uFE0F", "\u{1F602}", "\u{1F622}",
@@ -24,7 +25,7 @@ export default function EmojiPicker({ onSelect, onClose }) {
           placeholder="Search..."
           autoFocus
         />
-        <button type="button" className="icon-btn" onClick={onClose}>X</button>
+        <button type="button" className="icon-btn" onClick={onClose}><CloseIcon size={14} /></button>
       </div>
       <div className="emoji-grid">
         {filtered.map((emoji) => (

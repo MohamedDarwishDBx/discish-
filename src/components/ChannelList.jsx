@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { HashIcon, VoiceIcon, PlusIcon, EditIcon, TrashIcon } from "./Icons";
+import Modal from "./Modal";
 
 export default function ChannelList({
   textChannels,
@@ -14,6 +16,14 @@ export default function ChannelList({
   onDeleteChannel,
 }) {
   const [ctxMenu, setCtxMenu] = useState(null);
+  const [renameId, setRenameId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const renameInputRef = useRef(null);
+
+  useEffect(() => {
+    if (renameId && renameInputRef.current) renameInputRef.current.focus();
+  }, [renameId]);
 
   const handleContext = (e, channel) => {
     e.preventDefault();
@@ -22,31 +32,69 @@ export default function ChannelList({
 
   const closeCtx = () => setCtxMenu(null);
 
+  const startRename = (id, name) => {
+    setRenameId(id);
+    setRenameValue(name);
+    closeCtx();
+  };
+
+  const commitRename = () => {
+    if (renameValue.trim() && renameId) onRenameChannel?.(renameId, renameValue.trim());
+    setRenameId(null);
+    setRenameValue("");
+  };
+
+  const renderChannel = (channel, icon) => {
+    const unread = unreadCounts?.[channel.id] || 0;
+    const isRenaming = renameId === channel.id;
+
+    if (isRenaming) {
+      return (
+        <div key={channel.id} className="channel renaming">
+          <span className="channel-icon">{icon}</span>
+          <input
+            ref={renameInputRef}
+            className="channel-rename-input"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitRename();
+              if (e.key === "Escape") { setRenameId(null); setRenameValue(""); }
+            }}
+            onBlur={commitRename}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <button
+        key={channel.id}
+        type="button"
+        className={`channel ${channel.id === activeChannelId ? "active" : ""} ${unread > 0 ? "unread" : ""}`}
+        onClick={() => onSelectChannel(channel.id)}
+        onContextMenu={(e) => handleContext(e, channel)}
+      >
+        <span className="channel-icon">{icon}</span>
+        <span className="channel-name">{channel.name}</span>
+        {unread > 0 ? <span className="unread-badge">{unread > 99 ? "99+" : unread}</span> : null}
+        {channel.type === "voice" && voiceConnected && voiceChannelId === channel.id ? (
+          <span className="pill alt">Live</span>
+        ) : null}
+      </button>
+    );
+  };
+
   return (
     <>
       <div className="channel-group">
         <div className="group-row">
           <div className="group-title">Text Channels</div>
           {activeServerId ? (
-            <button type="button" className="group-action" onClick={onCreateChannel}>+</button>
+            <button type="button" className="group-action" onClick={onCreateChannel}><PlusIcon size={16} /></button>
           ) : null}
         </div>
-        {textChannels.map((channel) => {
-          const unread = unreadCounts?.[channel.id] || 0;
-          return (
-            <button
-              key={channel.id}
-              type="button"
-              className={`channel ${channel.id === activeChannelId ? "active" : ""} ${unread > 0 ? "unread" : ""}`}
-              onClick={() => onSelectChannel(channel.id)}
-              onContextMenu={(e) => handleContext(e, channel)}
-            >
-              <span className="channel-icon">#</span>
-              <span className="channel-name">{channel.name}</span>
-              {unread > 0 ? <span className="unread-badge">{unread > 99 ? "99+" : unread}</span> : null}
-            </button>
-          );
-        })}
+        {textChannels.map((channel) => renderChannel(channel, <HashIcon size={16} />))}
         {textChannels.length === 0 ? <p className="muted">No text channels</p> : null}
       </div>
 
@@ -54,24 +102,10 @@ export default function ChannelList({
         <div className="group-row">
           <div className="group-title">Voice Channels</div>
           {activeServerId ? (
-            <button type="button" className="group-action" onClick={onCreateChannel}>+</button>
+            <button type="button" className="group-action" onClick={onCreateChannel}><PlusIcon size={16} /></button>
           ) : null}
         </div>
-        {voiceChannels.map((channel) => (
-          <button
-            key={channel.id}
-            type="button"
-            className={`channel ${channel.id === activeChannelId ? "active" : ""}`}
-            onClick={() => onSelectChannel(channel.id)}
-            onContextMenu={(e) => handleContext(e, channel)}
-          >
-            <span className="channel-icon">)</span>
-            <span className="channel-name">{channel.name}</span>
-            {voiceConnected && voiceChannelId === channel.id ? (
-              <span className="pill alt">Live</span>
-            ) : null}
-          </button>
-        ))}
+        {voiceChannels.map((channel) => renderChannel(channel, <VoiceIcon size={16} />))}
         {voiceChannels.length === 0 ? <p className="muted">No voice channels</p> : null}
       </div>
 
@@ -82,27 +116,36 @@ export default function ChannelList({
             <button
               type="button"
               className="ctx-item"
-              onClick={() => {
-                const newName = prompt("Rename channel:", ctxMenu.channelName);
-                if (newName && newName.trim()) onRenameChannel?.(ctxMenu.channelId, newName.trim());
-                closeCtx();
-              }}
+              onClick={() => startRename(ctxMenu.channelId, ctxMenu.channelName)}
             >
-              Rename
+              <EditIcon size={14} /> Rename
             </button>
             <button
               type="button"
               className="ctx-item danger"
               onClick={() => {
-                if (confirm(`Delete #${ctxMenu.channelName}?`)) onDeleteChannel?.(ctxMenu.channelId);
+                setDeleteTarget({ id: ctxMenu.channelId, name: ctxMenu.channelName });
                 closeCtx();
               }}
             >
-              Delete
+              <TrashIcon size={14} /> Delete
             </button>
           </div>
         </>
       ) : null}
+
+      <Modal
+        open={!!deleteTarget}
+        title="Delete Channel"
+        onClose={() => setDeleteTarget(null)}
+        onSubmit={() => {
+          onDeleteChannel?.(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        submitLabel="Delete"
+      >
+        <p>Are you sure you want to delete <strong>#{deleteTarget?.name}</strong>? This cannot be undone.</p>
+      </Modal>
     </>
   );
 }

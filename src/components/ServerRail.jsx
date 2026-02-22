@@ -1,4 +1,5 @@
 import { pickColor, initialsFromName } from "../utils/helpers";
+import { ChatBubbleIcon, PlusIcon, LogoutIcon } from "./Icons";
 
 export default function ServerRail({
   servers,
@@ -14,7 +15,7 @@ export default function ServerRail({
         className={`server-btn home ${!activeServerId ? "active" : ""}`}
         onClick={() => onSelectServer(null)}
       >
-        <span className="server-badge home">DM</span>
+        <span className="server-badge home"><ChatBubbleIcon size={22} /></span>
       </button>
       <div className="server-divider" />
       <div className="server-list">
@@ -35,12 +36,12 @@ export default function ServerRail({
           </button>
         ))}
         <button type="button" className="server-btn add" onClick={onCreateServer}>
-          <span className="server-badge">+</span>
+          <span className="server-badge"><PlusIcon size={22} /></span>
         </button>
       </div>
       <div className="rail-footer">
-        <button type="button" className="rail-control" onClick={onLogout}>
-          Logout
+        <button type="button" className="rail-control" onClick={onLogout} title="Logout">
+          <LogoutIcon size={18} />
         </button>
       </div>
     </aside>
