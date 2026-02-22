@@ -23,7 +23,7 @@ from .auth import (
     verify_password,
 )
 from .db import Base, SessionLocal, engine, get_db
-from .models import Channel, Message, Server, ServerMembership, User
+from .models import Channel, Message, Reaction, Server, ServerMembership, User
 from .schemas import (
     ChannelCreate,
     ChannelOut,
@@ -31,6 +31,8 @@ from .schemas import (
     MessageCreate,
     MessageOut,
     MessageUpdate,
+    ReactionCreate,
+    ReactionOut,
     ServerCreate,
     ServerOut,
     Token,
@@ -410,8 +412,14 @@ def list_messages(
     if before:
         stmt = stmt.where(Message.created_at < before)
     stmt = stmt.order_by(Message.created_at.desc()).limit(limit)
-    messages = db.scalars(stmt).all()
-    return list(reversed(messages))
+    messages = list(reversed(db.scalars(stmt).all()))
+
+    result = []
+    for msg in messages:
+        out = MessageOut.model_validate(msg).model_copy()
+        out.reactions = _aggregate_reactions(msg, db)
+        result.append(out)
+    return result
 
 
 @app.post("/channels/{channel_id}/messages", response_model=MessageOut)
@@ -519,6 +527,83 @@ def delete_message(
         loop.create_task(manager.broadcast(channel_id, payload_out))
     except RuntimeError:
         pass
+
+
+def _aggregate_reactions(message: Message, db: Session) -> list[dict]:
+    reactions = db.scalars(
+        select(Reaction).where(Reaction.message_id == message.id)
+    ).all()
+    grouped: dict[str, list[str]] = {}
+    for r in reactions:
+        grouped.setdefault(r.emoji, []).append(r.user_id)
+    return [
+        {"emoji": emoji, "count": len(users), "users": users}
+        for emoji, users in grouped.items()
+    ]
+
+
+@app.get("/channels/{channel_id}/messages/{message_id}/reactions", response_model=list[ReactionOut])
+def get_reactions(
+    channel_id: str,
+    message_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[ReactionOut]:
+    message = db.get(Message, message_id)
+    if not message or message.channel_id != channel_id:
+        raise HTTPException(status_code=404, detail="Message not found")
+    channel = db.get(Channel, channel_id)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    require_membership(db, current_user.id, channel.server_id)
+    return _aggregate_reactions(message, db)
+
+
+@app.put("/channels/{channel_id}/messages/{message_id}/reactions", response_model=list[ReactionOut])
+def toggle_reaction(
+    channel_id: str,
+    message_id: str,
+    payload: ReactionCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[ReactionOut]:
+    message = db.get(Message, message_id)
+    if not message or message.channel_id != channel_id:
+        raise HTTPException(status_code=404, detail="Message not found")
+    channel = db.get(Channel, channel_id)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    require_membership(db, current_user.id, channel.server_id)
+
+    existing = db.scalar(
+        select(Reaction).where(
+            (Reaction.message_id == message_id)
+            & (Reaction.user_id == current_user.id)
+            & (Reaction.emoji == payload.emoji)
+        )
+    )
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(Reaction(message_id=message_id, user_id=current_user.id, emoji=payload.emoji))
+    db.commit()
+
+    aggregated = _aggregate_reactions(message, db)
+    broadcast_payload = {
+        "event": "reaction.updated",
+        "message_id": message_id,
+        "channel_id": channel_id,
+        "reactions": aggregated,
+    }
+
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(manager.broadcast(channel_id, broadcast_payload))
+    except RuntimeError:
+        pass
+
+    return aggregated
 
 
 @app.post("/voice/token", response_model=VoiceTokenOut)

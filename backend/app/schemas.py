@@ -65,6 +65,12 @@ class MessageUpdate(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
 
 
+class ReactionSummary(BaseModel):
+    emoji: str
+    count: int
+    users: list[str]
+
+
 class MessageOut(BaseModel):
     id: str
     channel_id: str
@@ -72,6 +78,7 @@ class MessageOut(BaseModel):
     content: str
     created_at: dt.datetime
     edited_at: dt.datetime | None = None
+    reactions: list[ReactionSummary] = []
 
     class Config:
         from_attributes = True
@@ -84,6 +91,16 @@ class MemberOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ReactionCreate(BaseModel):
+    emoji: str = Field(min_length=1, max_length=32)
+
+
+class ReactionOut(BaseModel):
+    emoji: str
+    count: int
+    users: list[str]
 
 
 class VoiceTokenRequest(BaseModel):

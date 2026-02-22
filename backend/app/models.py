@@ -97,3 +97,21 @@ class Message(Base):
 
     channel: Mapped["Channel"] = relationship(back_populates="messages")
     author: Mapped["User"] = relationship(back_populates="messages")
+    reactions: Mapped[list["Reaction"]] = relationship(
+        back_populates="message", cascade="all, delete-orphan"
+    )
+
+
+class Reaction(Base):
+    __tablename__ = "reactions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    message_id: Mapped[str] = mapped_column(ForeignKey("messages.id"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    emoji: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    message: Mapped["Message"] = relationship(back_populates="reactions")
+    user: Mapped["User"] = relationship()

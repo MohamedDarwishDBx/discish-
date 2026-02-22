@@ -305,6 +305,8 @@ export default function App() {
         setMessages((prev) => prev.map((m) => m.id === payload.id ? { ...m, content: payload.content, edited_at: payload.edited_at } : m));
       } else if (payload.event === "message.deleted") {
         setMessages((prev) => prev.filter((m) => m.id !== payload.id));
+      } else if (payload.event === "reaction.updated") {
+        setMessages((prev) => prev.map((m) => m.id === payload.message_id ? { ...m, reactions: payload.reactions } : m));
       } else if (payload.event === "typing.start") {
         const name = payload.username;
         setTypingUsers((prev) => prev.includes(name) ? prev : [...prev, name]);
@@ -418,6 +420,16 @@ export default function App() {
     try {
       await api(`/channels/${activeChannelId}/messages/${messageId}`, { method: "DELETE", token });
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } catch (err) { setError(err.message); }
+  };
+
+  const reactToMessage = async (messageId, emoji) => {
+    if (!activeChannelId) return;
+    try {
+      const reactions = await api(`/channels/${activeChannelId}/messages/${messageId}/reactions`, {
+        method: "PUT", body: { emoji }, token,
+      });
+      setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, reactions } : m));
     } catch (err) { setError(err.message); }
   };
 
@@ -574,6 +586,7 @@ export default function App() {
               currentUserId={user.id}
               onEditMessage={editMessage}
               onDeleteMessage={deleteMessage}
+              onReactMessage={reactToMessage}
             />
             <Composer value={composer} onChange={handleComposerChange} onSubmit={sendMessage} channelName={activeChannel.name} />
             <TypingIndicator typingUsers={typingUsers} />
