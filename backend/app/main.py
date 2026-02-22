@@ -970,7 +970,7 @@ def list_messages(
 
 
 @app.post("/channels/{channel_id}/messages", response_model=MessageOut)
-def create_message(
+async def create_message(
     channel_id: str,
     payload: MessageCreate,
     current_user: User = Depends(get_current_user),
@@ -997,12 +997,7 @@ def create_message(
         "username": current_user.username,
     }
 
-    import asyncio
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(manager.broadcast(channel_id, payload_out))
-    except RuntimeError:
-        pass
+    await manager.broadcast(channel_id, payload_out)
 
     return message
 
@@ -1046,7 +1041,7 @@ async def serve_upload(filename: str):
 
 
 @app.post("/channels/{channel_id}/messages/with-attachment", response_model=MessageOut)
-def create_message_with_attachment(
+async def create_message_with_attachment(
     channel_id: str,
     payload: MessageCreateWithAttachment,
     current_user: User = Depends(get_current_user),
@@ -1075,18 +1070,13 @@ def create_message_with_attachment(
     payload_out["event"] = "message.created"
     payload_out["author"] = {"id": current_user.id, "username": current_user.username}
 
-    import asyncio
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(manager.broadcast(channel_id, payload_out))
-    except RuntimeError:
-        pass
+    await manager.broadcast(channel_id, payload_out)
 
     return message
 
 
 @app.put("/channels/{channel_id}/messages/{message_id}", response_model=MessageOut)
-def update_message(
+async def update_message(
     channel_id: str,
     message_id: str,
     payload: MessageUpdate,
@@ -1113,18 +1103,13 @@ def update_message(
     payload_out["event"] = "message.updated"
     payload_out["author"] = {"id": current_user.id, "username": current_user.username}
 
-    import asyncio
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(manager.broadcast(channel_id, payload_out))
-    except RuntimeError:
-        pass
+    await manager.broadcast(channel_id, payload_out)
 
     return message
 
 
 @app.delete("/channels/{channel_id}/messages/{message_id}", status_code=204)
-def delete_message(
+async def delete_message(
     channel_id: str,
     message_id: str,
     current_user: User = Depends(get_current_user),
@@ -1146,12 +1131,7 @@ def delete_message(
 
     payload_out = {"event": "message.deleted", "id": message_id, "channel_id": channel_id}
 
-    import asyncio
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(manager.broadcast(channel_id, payload_out))
-    except RuntimeError:
-        pass
+    await manager.broadcast(channel_id, payload_out)
 
 
 @app.post("/channels/{channel_id}/read", status_code=204)
@@ -1266,7 +1246,7 @@ def get_reactions(
 
 
 @app.put("/channels/{channel_id}/messages/{message_id}/reactions", response_model=list[ReactionOut])
-def toggle_reaction(
+async def toggle_reaction(
     channel_id: str,
     message_id: str,
     payload: ReactionCreate,
@@ -1302,12 +1282,7 @@ def toggle_reaction(
         "reactions": aggregated,
     }
 
-    import asyncio
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(manager.broadcast(channel_id, broadcast_payload))
-    except RuntimeError:
-        pass
+    await manager.broadcast(channel_id, broadcast_payload)
 
     return aggregated
 
@@ -1391,27 +1366,30 @@ async def channel_socket(
             await websocket.close(code=1008)
             return
 
-        await manager.connect(channel_id, websocket)
-        try:
-            while True:
-                raw = await websocket.receive_text()
-                try:
-                    import json
-                    data = json.loads(raw)
-                    if data.get("event") == "typing.start":
-                        typing_payload = {
-                            "event": "typing.start",
-                            "user_id": user.id,
-                            "username": user.username,
-                            "channel_id": channel_id,
-                        }
-                        await manager.broadcast_except(channel_id, typing_payload, websocket)
-                except (json.JSONDecodeError, KeyError):
-                    pass
-        except WebSocketDisconnect:
-            manager.disconnect(channel_id, websocket)
+        user_id = user.id
+        username = user.username
     finally:
         db.close()
+
+    await manager.connect(channel_id, websocket)
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                import json
+                data = json.loads(raw)
+                if data.get("event") == "typing.start":
+                    typing_payload = {
+                        "event": "typing.start",
+                        "user_id": user_id,
+                        "username": username,
+                        "channel_id": channel_id,
+                    }
+                    await manager.broadcast_except(channel_id, typing_payload, websocket)
+            except (json.JSONDecodeError, KeyError):
+                pass
+    except WebSocketDisconnect:
+        manager.disconnect(channel_id, websocket)
 
 
 @app.websocket("/ws/presence")
@@ -1425,50 +1403,50 @@ async def presence_socket(
         if not user:
             await websocket.close(code=1008)
             return
-
-        await websocket.accept()
-        _presence[user.id] = "online"
-        _presence_sockets.add(websocket)
-
-        # Broadcast this user came online
-        status_payload = {"event": "presence.update", "user_id": user.id, "status": "online"}
-        for ws in list(_presence_sockets):
-            if ws is not websocket:
-                try:
-                    await ws.send_json(status_payload)
-                except Exception:
-                    _presence_sockets.discard(ws)
-
-        try:
-            while True:
-                raw = await websocket.receive_text()
-                try:
-                    import json
-                    data = json.loads(raw)
-                    if data.get("event") == "presence.update" and data.get("status") in ("online", "idle", "dnd", "offline"):
-                        _presence[user.id] = data["status"]
-                        payload = {"event": "presence.update", "user_id": user.id, "status": data["status"]}
-                        for ws in list(_presence_sockets):
-                            if ws is not websocket:
-                                try:
-                                    await ws.send_json(payload)
-                                except Exception:
-                                    _presence_sockets.discard(ws)
-                except (json.JSONDecodeError, KeyError):
-                    pass
-        except WebSocketDisconnect:
-            pass
-        finally:
-            _presence_sockets.discard(websocket)
-            _presence[user.id] = "offline"
-            offline_payload = {"event": "presence.update", "user_id": user.id, "status": "offline"}
-            for ws in list(_presence_sockets):
-                try:
-                    await ws.send_json(offline_payload)
-                except Exception:
-                    _presence_sockets.discard(ws)
+        user_id = user.id
     finally:
         db.close()
+
+    await websocket.accept()
+    _presence[user_id] = "online"
+    _presence_sockets.add(websocket)
+
+    status_payload = {"event": "presence.update", "user_id": user_id, "status": "online"}
+    for ws in list(_presence_sockets):
+        if ws is not websocket:
+            try:
+                await ws.send_json(status_payload)
+            except Exception:
+                _presence_sockets.discard(ws)
+
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                import json
+                data = json.loads(raw)
+                if data.get("event") == "presence.update" and data.get("status") in ("online", "idle", "dnd", "offline"):
+                    _presence[user_id] = data["status"]
+                    payload = {"event": "presence.update", "user_id": user_id, "status": data["status"]}
+                    for ws in list(_presence_sockets):
+                        if ws is not websocket:
+                            try:
+                                await ws.send_json(payload)
+                            except Exception:
+                                _presence_sockets.discard(ws)
+            except (json.JSONDecodeError, KeyError):
+                pass
+    except WebSocketDisconnect:
+        pass
+    finally:
+        _presence_sockets.discard(websocket)
+        _presence[user_id] = "offline"
+        offline_payload = {"event": "presence.update", "user_id": user_id, "status": "offline"}
+        for ws in list(_presence_sockets):
+            try:
+                await ws.send_json(offline_payload)
+            except Exception:
+                _presence_sockets.discard(ws)
 
 
 @app.get("/presence")
