@@ -8,9 +8,10 @@ from pathlib import Path
 from typing import Annotated
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.websockets import WebSocketDisconnect
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -29,6 +30,7 @@ from .schemas import (
     ChannelOut,
     MemberOut,
     MessageCreate,
+    MessageCreateWithAttachment,
     MessageOut,
     MessageUpdate,
     ReactionCreate,
@@ -51,6 +53,9 @@ manager = ConnectionManager()
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DIST_DIR = PROJECT_ROOT / "dist"
 INDEX_FILE = DIST_DIR / "index.html"
+UPLOADS_DIR = PROJECT_ROOT / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
 CSP_CONNECT_SRC = os.getenv("CSP_CONNECT_SRC", "").strip()
 
 _rate_limit_lock = threading.Lock()
@@ -460,6 +465,84 @@ def create_message(
     return message
 
 
+import uuid as _uuid_mod
+
+ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".txt", ".zip", ".mp3", ".mp4"}
+
+
+@app.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    ext = Path(file.filename).suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"File type {ext} not allowed")
+
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    unique_name = f"{_uuid_mod.uuid4().hex}{ext}"
+    dest = UPLOADS_DIR / unique_name
+    dest.write_bytes(data)
+
+    url = f"/uploads/{unique_name}"
+    return {"url": url, "filename": file.filename}
+
+
+@app.get("/uploads/{filename}", include_in_schema=False)
+async def serve_upload(filename: str):
+    safe_name = Path(filename).name
+    candidate = UPLOADS_DIR / safe_name
+    if not candidate.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(candidate)
+
+
+@app.post("/channels/{channel_id}/messages/with-attachment", response_model=MessageOut)
+def create_message_with_attachment(
+    channel_id: str,
+    payload: MessageCreateWithAttachment,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    channel = db.get(Channel, channel_id)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    require_membership(db, current_user.id, channel.server_id)
+
+    if not payload.content.strip() and not payload.attachment_url:
+        raise HTTPException(status_code=400, detail="Message must have content or attachment")
+
+    message = Message(
+        channel_id=channel_id,
+        author_id=current_user.id,
+        content=payload.content or "",
+        attachment_url=payload.attachment_url,
+        attachment_name=payload.attachment_name,
+    )
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+
+    payload_out = MessageOut.model_validate(message).model_dump()
+    payload_out["event"] = "message.created"
+    payload_out["author"] = {"id": current_user.id, "username": current_user.username}
+
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(manager.broadcast(channel_id, payload_out))
+    except RuntimeError:
+        pass
+
+    return message
+
+
 @app.put("/channels/{channel_id}/messages/{message_id}", response_model=MessageOut)
 def update_message(
     channel_id: str,
@@ -728,6 +811,8 @@ async def serve_spa(full_path: str) -> FileResponse:
         "docs",
         "openapi.json",
         "redoc",
+        "upload",
+        "uploads",
     }
     first_segment = full_path.split("/", 1)[0]
     if first_segment in blocked_prefixes:

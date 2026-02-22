@@ -2,6 +2,12 @@ import { useState } from "react";
 import { pickColor, initialsFromName, formatTime } from "../utils/helpers";
 import EmojiPicker from "./EmojiPicker";
 
+const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp"];
+function isImageUrl(url) {
+  if (!url) return false;
+  return IMAGE_EXTENSIONS.some((ext) => url.toLowerCase().endsWith(ext));
+}
+
 export default function MessageRow({ message, authorName, isOwn, currentUserId, onEdit, onDelete, onReact }) {
   const [hovering, setHovering] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -62,7 +68,23 @@ export default function MessageRow({ message, authorName, isOwn, currentUserId, 
             </div>
           </form>
         ) : (
-          <p className="message-text">{message.content}</p>
+          <>
+            {message.content ? <p className="message-text">{message.content}</p> : null}
+            {message.attachment_url ? (
+              <div className="message-attachment">
+                {isImageUrl(message.attachment_url) ? (
+                  <a href={message.attachment_url} target="_blank" rel="noopener noreferrer">
+                    <img src={message.attachment_url} alt={message.attachment_name || "attachment"} className="attachment-image" />
+                  </a>
+                ) : (
+                  <a href={message.attachment_url} target="_blank" rel="noopener noreferrer" className="attachment-link">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm4 18H6V4h7v5h5v11Z" /></svg>
+                    <span>{message.attachment_name || "Download"}</span>
+                  </a>
+                )}
+              </div>
+            ) : null}
+          </>
         )}
         {reactions.length > 0 ? (
           <div className="message-reactions">

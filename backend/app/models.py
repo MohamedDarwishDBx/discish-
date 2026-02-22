@@ -88,6 +88,8 @@ class Message(Base):
     channel_id: Mapped[str] = mapped_column(ForeignKey("channels.id"), index=True)
     author_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     content: Mapped[str] = mapped_column(Text)
+    attachment_url: Mapped[str | None] = mapped_column(String(512), nullable=True, default=None)
+    attachment_name: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

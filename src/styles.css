@@ -1211,6 +1211,60 @@ input {
   line-height: 1.45;
 }
 
+.message-attachment {
+  margin-top: 6px;
+}
+
+.attachment-image {
+  max-width: 400px;
+  max-height: 300px;
+  border-radius: 8px;
+  object-fit: contain;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.attachment-image:hover {
+  opacity: 0.85;
+}
+
+.attachment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--brand);
+  text-decoration: none;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.attachment-link:hover {
+  background: var(--bg-tertiary);
+}
+
+.attachment-link svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.send-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .message-edited {
   font-size: 10px;
   color: var(--text-muted);
@@ -1441,15 +1495,101 @@ input {
   color: var(--text-muted);
 }
 
+.composer-attachment-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 18px 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.attachment-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.attachment-file-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(88, 101, 242, 0.2);
+  display: grid;
+  place-items: center;
+}
+
+.attachment-file-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--brand);
+}
+
+.attachment-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.attachment-remove svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.attachment-remove:hover {
+  color: var(--danger);
+}
+
 .composer {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 10px;
   margin: 0 18px 16px;
   padding: 8px 10px;
   border-radius: 10px;
   background: #383a40;
   border: 1px solid var(--border);
+}
+
+.composer-upload-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.composer-upload-btn:hover {
+  color: var(--text-normal);
+}
+
+.composer-upload-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .composer-field {

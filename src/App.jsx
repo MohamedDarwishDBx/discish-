@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Room, RoomEvent, Track } from "livekit-client";
 
-import { api } from "./utils/api";
+import { api, API_URL } from "./utils/api";
 import { WS_URL, TOKEN_KEY } from "./utils/api";
 import { formatDate, withTimeout } from "./utils/helpers";
 import {
@@ -405,6 +405,31 @@ export default function App() {
     if (value.trim()) sendTyping();
   }, [sendTyping]);
 
+  const uploadAndSendMessage = async (file, text) => {
+    if (!activeChannelId || !token) return;
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await fetch(`${API_URL}/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      const { url, filename } = await uploadRes.json();
+
+      const msg = await api(`/channels/${activeChannelId}/messages/with-attachment`, {
+        method: "POST",
+        body: { content: text || "", attachment_url: url, attachment_name: filename },
+        token,
+      });
+      setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [
+        ...prev,
+        { ...msg, author: { id: user.id, username: user.username } },
+      ]);
+    } catch (err) { setError(err.message); }
+  };
+
   const editMessage = async (messageId, newContent) => {
     if (!activeChannelId) return;
     try {
@@ -588,7 +613,7 @@ export default function App() {
               onDeleteMessage={deleteMessage}
               onReactMessage={reactToMessage}
             />
-            <Composer value={composer} onChange={handleComposerChange} onSubmit={sendMessage} channelName={activeChannel.name} />
+            <Composer value={composer} onChange={handleComposerChange} onSubmit={sendMessage} onUpload={uploadAndSendMessage} channelName={activeChannel.name} />
             <TypingIndicator typingUsers={typingUsers} />
           </>
         )}

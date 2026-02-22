@@ -11,6 +11,8 @@ export default defineConfig({
       "/channels": "http://127.0.0.1:8000",
       "/voice": "http://127.0.0.1:8000",
       "/health": "http://127.0.0.1:8000",
+      "/upload": "http://127.0.0.1:8000",
+      "/uploads": "http://127.0.0.1:8000",
       "/ws": {
         target: "ws://127.0.0.1:8000",
         ws: true,
