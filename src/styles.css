@@ -923,6 +923,83 @@ input {
   background: #4e5058;
 }
 
+.voice-status-bar {
+  padding: 10px;
+  border-radius: var(--radius);
+  background: rgba(35, 165, 90, 0.12);
+  border: 1px solid rgba(35, 165, 90, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.voice-status-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+  animation: voice-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.voice-status-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.voice-status-channel {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 0;
+  cursor: pointer;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.voice-status-channel:hover {
+  color: var(--text-normal);
+}
+
+.voice-disconnect-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(237, 66, 69, 0.3);
+  background: rgba(237, 66, 69, 0.15);
+  color: var(--danger);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.voice-disconnect-btn:hover {
+  background: rgba(237, 66, 69, 0.3);
+  border-color: rgba(237, 66, 69, 0.5);
+}
+
+.voice-disconnect-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
 .profile-card {
   margin-top: auto;
   padding: 10px;
