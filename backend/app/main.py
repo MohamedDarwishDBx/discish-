@@ -1,3 +1,4 @@
+import asyncio
 import datetime as dt
 import os
 import threading
@@ -62,6 +63,13 @@ manager = ConnectionManager()
 _presence: dict[str, str] = {}
 _presence_sockets: set[WebSocket] = set()
 _voice_occupants: dict[str, list[dict]] = {}  # channel_id -> [{user_id, username, avatar_url}]
+_main_loop: asyncio.AbstractEventLoop | None = None
+
+
+def _fire_and_forget(coro) -> None:
+    """Schedule an async coroutine from a sync (threadpool) context."""
+    if _main_loop and _main_loop.is_running():
+        asyncio.run_coroutine_threadsafe(coro, _main_loop)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DIST_DIR = PROJECT_ROOT / "dist"
 INDEX_FILE = DIST_DIR / "index.html"
@@ -100,6 +108,9 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup() -> None:
+    global _main_loop
+    _main_loop = asyncio.get_running_loop()
+
     jwt_secret = os.getenv("JWT_SECRET", "").strip()
     if len(jwt_secret) < 32:
         raise RuntimeError("JWT_SECRET must be at least 32 characters")
@@ -993,7 +1004,7 @@ def list_messages(
 
 
 @app.post("/channels/{channel_id}/messages", response_model=MessageOut)
-async def create_message(
+def create_message(
     channel_id: str,
     payload: MessageCreate,
     current_user: User = Depends(get_current_user),
@@ -1020,7 +1031,7 @@ async def create_message(
         "username": current_user.username,
     }
 
-    await manager.broadcast(channel_id, payload_out)
+    _fire_and_forget(manager.broadcast(channel_id, payload_out))
 
     return message
 
@@ -1064,7 +1075,7 @@ async def serve_upload(filename: str):
 
 
 @app.post("/channels/{channel_id}/messages/with-attachment", response_model=MessageOut)
-async def create_message_with_attachment(
+def create_message_with_attachment(
     channel_id: str,
     payload: MessageCreateWithAttachment,
     current_user: User = Depends(get_current_user),
@@ -1093,13 +1104,13 @@ async def create_message_with_attachment(
     payload_out["event"] = "message.created"
     payload_out["author"] = {"id": current_user.id, "username": current_user.username}
 
-    await manager.broadcast(channel_id, payload_out)
+    _fire_and_forget(manager.broadcast(channel_id, payload_out))
 
     return message
 
 
 @app.put("/channels/{channel_id}/messages/{message_id}", response_model=MessageOut)
-async def update_message(
+def update_message(
     channel_id: str,
     message_id: str,
     payload: MessageUpdate,
@@ -1126,13 +1137,13 @@ async def update_message(
     payload_out["event"] = "message.updated"
     payload_out["author"] = {"id": current_user.id, "username": current_user.username}
 
-    await manager.broadcast(channel_id, payload_out)
+    _fire_and_forget(manager.broadcast(channel_id, payload_out))
 
     return message
 
 
 @app.delete("/channels/{channel_id}/messages/{message_id}", status_code=204)
-async def delete_message(
+def delete_message(
     channel_id: str,
     message_id: str,
     current_user: User = Depends(get_current_user),
@@ -1154,7 +1165,7 @@ async def delete_message(
 
     payload_out = {"event": "message.deleted", "id": message_id, "channel_id": channel_id}
 
-    await manager.broadcast(channel_id, payload_out)
+    _fire_and_forget(manager.broadcast(channel_id, payload_out))
 
 
 @app.post("/channels/{channel_id}/read", status_code=204)
@@ -1269,7 +1280,7 @@ def get_reactions(
 
 
 @app.put("/channels/{channel_id}/messages/{message_id}/reactions", response_model=list[ReactionOut])
-async def toggle_reaction(
+def toggle_reaction(
     channel_id: str,
     message_id: str,
     payload: ReactionCreate,
@@ -1305,13 +1316,13 @@ async def toggle_reaction(
         "reactions": aggregated,
     }
 
-    await manager.broadcast(channel_id, broadcast_payload)
+    _fire_and_forget(manager.broadcast(channel_id, broadcast_payload))
 
     return aggregated
 
 
 @app.post("/voice/token", response_model=VoiceTokenOut)
-async def create_voice_token(
+def create_voice_token(
     payload: VoiceTokenRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1358,13 +1369,13 @@ async def create_voice_token(
 
     old_ch = _remove_voice_occupant(current_user.id)
     if old_ch:
-        await _broadcast_voice_occupants(old_ch)
+        _fire_and_forget(_broadcast_voice_occupants(old_ch))
 
     occupant = {"user_id": current_user.id, "username": current_user.username, "avatar_url": current_user.avatar_url}
     members = _voice_occupants.setdefault(payload.channel_id, [])
     if not any(m["user_id"] == current_user.id for m in members):
         members.append(occupant)
-    await _broadcast_voice_occupants(payload.channel_id)
+    _fire_and_forget(_broadcast_voice_occupants(payload.channel_id))
 
     return VoiceTokenOut(
         token=token,
