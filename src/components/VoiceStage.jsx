@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { pickColor, initialsFromName } from "../utils/helpers";
+import { ScreenShareIcon, ScreenShareOffIcon, VideoIcon, VideoOffIcon } from "./Icons";
 
 export default function VoiceStage({
   channelName,
@@ -12,13 +13,17 @@ export default function VoiceStage({
   voiceDeafened,
   voiceError,
   audioSinkRef,
+  screenShares = [],
+  videoFeeds = [],
+  isScreenSharing = false,
+  isCameraOn = false,
   onJoin,
   onLeave,
   onToggleMute,
   onToggleDeafen,
+  onToggleScreenShare,
+  onToggleCamera,
 }) {
-  const [pttHeld, setPttHeld] = useState(false);
-
   const speakingCount = voiceMembers.filter((p) => p.speaking).length;
 
   return (
@@ -103,6 +108,22 @@ export default function VoiceStage({
               </button>
               <button
                 type="button"
+                className={`voice-ctrl-btn ${isCameraOn ? "sharing" : ""}`}
+                onClick={onToggleCamera}
+                title={isCameraOn ? "Turn Off Camera" : "Turn On Camera"}
+              >
+                {isCameraOn ? <VideoIcon size={20} /> : <VideoOffIcon size={20} />}
+              </button>
+              <button
+                type="button"
+                className={`voice-ctrl-btn ${isScreenSharing ? "sharing" : ""}`}
+                onClick={onToggleScreenShare}
+                title={isScreenSharing ? "Stop Sharing" : "Share Screen"}
+              >
+                {isScreenSharing ? <ScreenShareOffIcon size={20} /> : <ScreenShareIcon size={20} />}
+              </button>
+              <button
+                type="button"
                 className="voice-ctrl-btn disconnect"
                 onClick={onLeave}
                 title="Disconnect"
@@ -116,44 +137,99 @@ export default function VoiceStage({
         </div>
       </div>
 
+      {screenShares.length > 0 ? (
+        <div className="screen-share-grid">
+          {screenShares.map((share) => (
+            <ScreenShareTile key={share.participantId + "-screen"} share={share} />
+          ))}
+        </div>
+      ) : null}
+
       <div className="voice-participants-grid">
         {voiceMembers.length === 0 ? (
-          <p className="muted voice-empty">No one in voice yet — be the first to join!</p>
+          <p className="muted voice-empty">No one in voice yet -- be the first to join!</p>
         ) : (
           voiceMembers.map((participant) => (
-            <div
+            <ParticipantCard
               key={participant.id}
-              className={`voice-participant-card ${participant.speaking ? "speaking" : ""}`}
-            >
-              <div className={`voice-avatar-ring ${participant.speaking ? "ring-active" : ""}`}>
-                <span
-                  className="avatar voice-avatar"
-                  style={{ background: pickColor(participant.username) }}
-                >
-                  {initialsFromName(participant.username)}
-                </span>
-              </div>
-              <span className="voice-participant-name">
-                {participant.username}
-                {participant.isYou ? " (you)" : ""}
-              </span>
-              <div className="voice-participant-status">
-                {participant.muted ? (
-                  <span className="voice-status-icon muted-icon" title="Muted">
-                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3a4 4 0 0 1 4 4v5a4 4 0 1 1-8 0V7a4 4 0 0 1 4-4ZM1 1l22 22" fill="none" stroke="currentColor" strokeWidth="2" /></svg>
-                  </span>
-                ) : participant.speaking ? (
-                  <span className="voice-status-icon speaking-icon" title="Speaking">
-                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 10v4h4l5 5V5L7 10H3Z" fill="var(--success)" /><path d="M16.5 12A4.5 4.5 0 0 0 14 8v8a4.47 4.47 0 0 0 2.5-4Z" fill="var(--success)" /></svg>
-                  </span>
-                ) : null}
-              </div>
-            </div>
+              participant={participant}
+              videoFeed={videoFeeds.find((v) => v.participantId === participant.id)}
+            />
           ))
         )}
       </div>
 
       <div ref={audioSinkRef} style={{ display: "none" }} />
     </section>
+  );
+}
+
+function ScreenShareTile({ share }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const container = videoRef.current;
+    if (!container || !share.element) return;
+    container.innerHTML = "";
+    share.element.className = "screen-share-video";
+    container.appendChild(share.element);
+    return () => { container.innerHTML = ""; };
+  }, [share.element]);
+
+  return (
+    <div className="screen-share-tile">
+      <div className="screen-share-video-container" ref={videoRef} />
+      <div className="screen-share-label">{share.participantName}&apos;s screen</div>
+    </div>
+  );
+}
+
+function ParticipantCard({ participant, videoFeed }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const container = videoRef.current;
+    if (!container || !videoFeed?.element) return;
+    container.innerHTML = "";
+    videoFeed.element.className = "webcam-video";
+    container.appendChild(videoFeed.element);
+    return () => { container.innerHTML = ""; };
+  }, [videoFeed?.element]);
+
+  return (
+    <div className={`voice-participant-card ${participant.speaking ? "speaking" : ""}`}>
+      <div className={`voice-avatar-ring ${participant.speaking ? "ring-active" : ""}`}>
+        {videoFeed ? (
+          <div className="webcam-container" ref={videoRef} />
+        ) : (
+          <span
+            className="avatar voice-avatar"
+            style={{ background: pickColor(participant.username) }}
+          >
+            {initialsFromName(participant.username)}
+          </span>
+        )}
+      </div>
+      <span className="voice-participant-name">
+        {participant.username}
+        {participant.isYou ? " (you)" : ""}
+      </span>
+      <div className="voice-participant-status">
+        {participant.isScreenSharing ? (
+          <span className="voice-status-icon screen-icon" title="Sharing screen">
+            <ScreenShareIcon size={14} />
+          </span>
+        ) : null}
+        {participant.muted ? (
+          <span className="voice-status-icon muted-icon" title="Muted">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3a4 4 0 0 1 4 4v5a4 4 0 1 1-8 0V7a4 4 0 0 1 4-4ZM1 1l22 22" fill="none" stroke="currentColor" strokeWidth="2" /></svg>
+          </span>
+        ) : participant.speaking ? (
+          <span className="voice-status-icon speaking-icon" title="Speaking">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 10v4h4l5 5V5L7 10H3Z" fill="var(--success)" /><path d="M16.5 12A4.5 4.5 0 0 0 14 8v8a4.47 4.47 0 0 0 2.5-4Z" fill="var(--success)" /></svg>
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 }

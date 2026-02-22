@@ -1,3 +1,5 @@
+import { Track } from "livekit-client";
+
 export const VOICE_CONNECT_TIMEOUT_MS = 12000;
 
 export const participantMuted = (participant) => {
@@ -6,6 +8,13 @@ export const participantMuted = (participant) => {
     return true;
   }
   return audioPublications.every((publication) => publication.isMuted);
+};
+
+export const participantHasSource = (participant, source) => {
+  for (const pub of participant.videoTrackPublications.values()) {
+    if (pub.source === source && pub.track && !pub.isMuted) return true;
+  }
+  return false;
 };
 
 export const buildVoiceMembers = (room, currentUserId) => {
@@ -24,7 +33,9 @@ export const buildVoiceMembers = (room, currentUserId) => {
       username: participant.name || participant.identity,
       muted: participantMuted(participant),
       speaking: participant.isSpeaking,
-      isYou: participant.identity === currentUserId
+      isYou: participant.identity === currentUserId,
+      isScreenSharing: participantHasSource(participant, Track.Source.ScreenShare),
+      isCameraOn: participantHasSource(participant, Track.Source.Camera),
     }))
     .sort((first, second) => {
       if (first.isYou) return -1;

@@ -59,6 +59,10 @@ export default function App() {
   const [voiceDeafened, setVoiceDeafened] = useState(false);
   const [voiceMembers, setVoiceMembers] = useState([]);
   const [voiceError, setVoiceError] = useState("");
+  const [screenShares, setScreenShares] = useState([]);
+  const [videoFeeds, setVideoFeeds] = useState([]);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(false);
   const [showServerModal, setShowServerModal] = useState(false);
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [serverModalName, setServerModalName] = useState("");
@@ -168,6 +172,10 @@ export default function App() {
     setVoiceMuted(false);
     setVoiceDeafened(false);
     setVoiceMembers([]);
+    setScreenShares([]);
+    setVideoFeeds([]);
+    setIsScreenSharing(false);
+    setIsCameraOn(false);
     clearAudioSink(audioSinkRef);
     if (!options.keepError) setVoiceError("");
   };
@@ -206,19 +214,50 @@ export default function App() {
       room.on(RoomEvent.LocalTrackPublished, updateMembers);
       room.on(RoomEvent.LocalTrackUnpublished, updateMembers);
 
-      room.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind !== Track.Kind.Audio) return;
-        const el = track.attach();
-        el.autoplay = true;
-        el.playsInline = true;
-        el.muted = voiceDeafenedRef.current;
-        audioSinkRef.current?.appendChild(el);
+      room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+        if (track.kind === Track.Kind.Audio) {
+          const el = track.attach();
+          el.autoplay = true;
+          el.playsInline = true;
+          el.muted = voiceDeafenedRef.current;
+          audioSinkRef.current?.appendChild(el);
+        } else if (track.kind === Track.Kind.Video) {
+          const el = track.attach();
+          el.autoplay = true;
+          el.playsInline = true;
+          const entry = { participantId: participant.identity, participantName: participant.name || participant.identity, track, element: el };
+          if (track.source === Track.Source.ScreenShare) {
+            setScreenShares((prev) => [...prev.filter((s) => !(s.participantId === entry.participantId && s.track.source === track.source)), entry]);
+          } else if (track.source === Track.Source.Camera) {
+            setVideoFeeds((prev) => [...prev.filter((v) => v.participantId !== entry.participantId), entry]);
+          }
+        }
         updateMembers();
       });
 
-      room.on(RoomEvent.TrackUnsubscribed, (track) => {
-        if (track.kind !== Track.Kind.Audio) return;
-        track.detach().forEach((e) => e.remove());
+      room.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
+        if (track.kind === Track.Kind.Audio) {
+          track.detach().forEach((e) => e.remove());
+        } else if (track.kind === Track.Kind.Video) {
+          track.detach().forEach((e) => e.remove());
+          if (track.source === Track.Source.ScreenShare) {
+            setScreenShares((prev) => prev.filter((s) => !(s.participantId === participant.identity && s.track === track)));
+          } else if (track.source === Track.Source.Camera) {
+            setVideoFeeds((prev) => prev.filter((v) => v.participantId !== participant.identity));
+          }
+        }
+        updateMembers();
+      });
+
+      room.on(RoomEvent.LocalTrackPublished, (pub) => {
+        if (pub.source === Track.Source.ScreenShare) setIsScreenSharing(true);
+        else if (pub.source === Track.Source.Camera) setIsCameraOn(true);
+        updateMembers();
+      });
+
+      room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
+        if (pub.source === Track.Source.ScreenShare) setIsScreenSharing(false);
+        else if (pub.source === Track.Source.Camera) setIsCameraOn(false);
         updateMembers();
       });
 
@@ -254,6 +293,31 @@ export default function App() {
   };
 
   const toggleDeafen = () => setVoiceDeafened((prev) => !prev);
+
+  const toggleScreenShare = async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      await room.localParticipant.setScreenShareEnabled(!isScreenSharing, {
+        resolution: { width: 1920, height: 1080, frameRate: 30 },
+        contentHint: "detail",
+      });
+    } catch (err) {
+      if (err.name !== "NotAllowedError") setVoiceError(err.message || "Screen share failed");
+    }
+  };
+
+  const toggleCamera = async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      await room.localParticipant.setCameraEnabled(!isCameraOn, {
+        resolution: { width: 1280, height: 720, frameRate: 24 },
+      });
+    } catch (err) {
+      setVoiceError(err.message || "Camera failed");
+    }
+  };
 
   useEffect(() => {
     voiceDeafenedRef.current = voiceDeafened;
@@ -746,10 +810,16 @@ export default function App() {
             voiceDeafened={voiceDeafened}
             voiceError={voiceError}
             audioSinkRef={audioSinkRef}
+            screenShares={screenShares}
+            videoFeeds={videoFeeds}
+            isScreenSharing={isScreenSharing}
+            isCameraOn={isCameraOn}
             onJoin={() => connectVoiceChannel(activeChannel)}
             onLeave={disconnectVoice}
             onToggleMute={toggleMute}
             onToggleDeafen={toggleDeafen}
+            onToggleScreenShare={toggleScreenShare}
+            onToggleCamera={toggleCamera}
           />
         ) : (
           <>
