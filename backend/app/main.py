@@ -108,21 +108,48 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup() -> None:
+    import logging
+
+    log = logging.getLogger("discish.startup")
+
     global _main_loop
-    _main_loop = asyncio.get_running_loop()
+    try:
+        _main_loop = asyncio.get_running_loop()
+        log.info("Captured main event loop")
+    except RuntimeError:
+        log.warning("No running event loop found (broadcasts will be unavailable)")
+        _main_loop = None
 
     jwt_secret = os.getenv("JWT_SECRET", "").strip()
     if len(jwt_secret) < 32:
         raise RuntimeError("JWT_SECRET must be at least 32 characters")
+    log.info("JWT_SECRET validated")
 
     _, livekit_api_key, livekit_api_secret, _ = _voice_config()
     if livekit_api_key and len(livekit_api_secret) < 32:
         raise RuntimeError(
             "LIVEKIT_API_SECRET must be at least 32 characters"
         )
+    log.info("LiveKit config validated")
 
-    Base.metadata.create_all(bind=engine)
-    _run_migrations(engine)
+    max_retries = 5
+    for attempt in range(1, max_retries + 1):
+        try:
+            log.info("Connecting to database (attempt %d/%d)...", attempt, max_retries)
+            Base.metadata.create_all(bind=engine)
+            log.info("Database tables ready")
+            _run_migrations(engine)
+            log.info("Migrations complete")
+            break
+        except Exception as exc:
+            log.error("Database connection attempt %d failed: %s", attempt, exc)
+            if attempt == max_retries:
+                raise RuntimeError(
+                    f"Could not connect to database after {max_retries} attempts"
+                ) from exc
+            time.sleep(min(2 ** attempt, 10))
+
+    log.info("Startup complete")
 
 
 def _run_migrations(eng):
