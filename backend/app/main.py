@@ -603,7 +603,20 @@ async def channel_socket(
         await manager.connect(channel_id, websocket)
         try:
             while True:
-                await websocket.receive_text()
+                raw = await websocket.receive_text()
+                try:
+                    import json
+                    data = json.loads(raw)
+                    if data.get("event") == "typing.start":
+                        typing_payload = {
+                            "event": "typing.start",
+                            "user_id": user.id,
+                            "username": user.username,
+                            "channel_id": channel_id,
+                        }
+                        await manager.broadcast_except(channel_id, typing_payload, websocket)
+                except (json.JSONDecodeError, KeyError):
+                    pass
         except WebSocketDisconnect:
             manager.disconnect(channel_id, websocket)
     finally:

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Room, RoomEvent, Track } from "livekit-client";
 
 import { api } from "./utils/api";
@@ -22,6 +22,7 @@ import VoiceStage from "./components/VoiceStage";
 import VoiceStatusBar from "./components/VoiceStatusBar";
 import MemberRail from "./components/MemberRail";
 import ProfileCard from "./components/ProfileCard";
+import TypingIndicator from "./components/TypingIndicator";
 
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
@@ -52,11 +53,14 @@ export default function App() {
   const [modalLoading, setModalLoading] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [memberRailOpen, setMemberRailOpen] = useState(true);
+  const [typingUsers, setTypingUsers] = useState([]);
   const messageListRef = useRef(null);
   const socketRef = useRef(null);
   const roomRef = useRef(null);
   const audioSinkRef = useRef(null);
   const voiceDeafenedRef = useRef(false);
+  const lastTypingSentRef = useRef(0);
+  const typingTimeoutsRef = useRef({});
 
   /* ── Auth ── */
 
@@ -301,10 +305,24 @@ export default function App() {
         setMessages((prev) => prev.map((m) => m.id === payload.id ? { ...m, content: payload.content, edited_at: payload.edited_at } : m));
       } else if (payload.event === "message.deleted") {
         setMessages((prev) => prev.filter((m) => m.id !== payload.id));
+      } else if (payload.event === "typing.start") {
+        const name = payload.username;
+        setTypingUsers((prev) => prev.includes(name) ? prev : [...prev, name]);
+        clearTimeout(typingTimeoutsRef.current[name]);
+        typingTimeoutsRef.current[name] = setTimeout(() => {
+          setTypingUsers((prev) => prev.filter((u) => u !== name));
+          delete typingTimeoutsRef.current[name];
+        }, 4000);
       }
     };
     socketRef.current = ws;
-    return () => { active = false; ws.close(); };
+    return () => {
+      active = false;
+      ws.close();
+      setTypingUsers([]);
+      Object.values(typingTimeoutsRef.current).forEach(clearTimeout);
+      typingTimeoutsRef.current = {};
+    };
   }, [activeChannelId, isVoiceChannel, token]);
 
   useEffect(() => {
@@ -370,6 +388,20 @@ export default function App() {
       setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, author: { id: user.id, username: user.username } }]);
     } catch (err) { setError(err.message); }
   };
+
+  const sendTyping = useCallback(() => {
+    const ws = socketRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < 2000) return;
+    lastTypingSentRef.current = now;
+    ws.send(JSON.stringify({ event: "typing.start" }));
+  }, []);
+
+  const handleComposerChange = useCallback((value) => {
+    setComposer(value);
+    if (value.trim()) sendTyping();
+  }, [sendTyping]);
 
   const editMessage = async (messageId, newContent) => {
     if (!activeChannelId) return;
@@ -543,7 +575,8 @@ export default function App() {
               onEditMessage={editMessage}
               onDeleteMessage={deleteMessage}
             />
-            <Composer value={composer} onChange={setComposer} onSubmit={sendMessage} channelName={activeChannel.name} />
+            <Composer value={composer} onChange={handleComposerChange} onSubmit={sendMessage} channelName={activeChannel.name} />
+            <TypingIndicator typingUsers={typingUsers} />
           </>
         )}
       </main>

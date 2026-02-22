@@ -23,3 +23,14 @@ class ConnectionManager:
                 await websocket.send_json(payload)
             except Exception:
                 self.disconnect(channel_id, websocket)
+
+    async def broadcast_except(
+        self, channel_id: str, payload: dict, exclude: WebSocket
+    ) -> None:
+        for websocket in list(self.active.get(channel_id, [])):
+            if websocket is exclude:
+                continue
+            try:
+                await websocket.send_json(payload)
+            except Exception:
+                self.disconnect(channel_id, websocket)
