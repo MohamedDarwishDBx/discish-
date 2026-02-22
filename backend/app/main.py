@@ -24,10 +24,12 @@ from .auth import (
     verify_password,
 )
 from .db import Base, SessionLocal, engine, get_db
-from .models import Channel, Message, Reaction, Server, ServerMembership, User
+from .models import Channel, DMChannelMember, Message, Reaction, Server, ServerMembership, User
 from .schemas import (
     ChannelCreate,
     ChannelOut,
+    DMChannelCreate,
+    DMChannelOut,
     MemberOut,
     MessageCreate,
     MessageCreateWithAttachment,
@@ -269,6 +271,91 @@ def me(current_user: User = Depends(get_current_user)) -> UserOut:
     return current_user
 
 
+@app.get("/users/search", response_model=list[UserOut])
+def search_users(
+    q: str = Query("", min_length=1, max_length=80),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[UserOut]:
+    if not q.strip():
+        return []
+    results = db.scalars(
+        select(User)
+        .where(User.username.ilike(f"%{q.strip()}%"))
+        .where(User.id != current_user.id)
+        .limit(20)
+    ).all()
+    return results
+
+
+@app.get("/dm", response_model=list[DMChannelOut])
+def list_dm_channels(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[DMChannelOut]:
+    my_dm_ids = db.scalars(
+        select(DMChannelMember.channel_id).where(DMChannelMember.user_id == current_user.id)
+    ).all()
+    if not my_dm_ids:
+        return []
+
+    results = []
+    for ch_id in my_dm_ids:
+        channel = db.get(Channel, ch_id)
+        if not channel or not channel.is_dm:
+            continue
+        other_member = db.scalar(
+            select(DMChannelMember).where(
+                (DMChannelMember.channel_id == ch_id)
+                & (DMChannelMember.user_id != current_user.id)
+            )
+        )
+        if not other_member:
+            continue
+        other_user = db.get(User, other_member.user_id)
+        if not other_user:
+            continue
+        results.append(DMChannelOut(id=channel.id, recipient=UserOut.model_validate(other_user)))
+    return results
+
+
+@app.post("/dm", response_model=DMChannelOut)
+def create_or_get_dm_channel(
+    payload: DMChannelCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DMChannelOut:
+    recipient = db.get(User, payload.recipient_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="User not found")
+    if recipient.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot DM yourself")
+
+    my_dms = db.scalars(
+        select(DMChannelMember.channel_id).where(DMChannelMember.user_id == current_user.id)
+    ).all()
+    for ch_id in my_dms:
+        other = db.scalar(
+            select(DMChannelMember).where(
+                (DMChannelMember.channel_id == ch_id)
+                & (DMChannelMember.user_id == recipient.id)
+            )
+        )
+        if other:
+            channel = db.get(Channel, ch_id)
+            if channel and channel.is_dm:
+                return DMChannelOut(id=channel.id, recipient=UserOut.model_validate(recipient))
+
+    channel = Channel(name=f"dm-{current_user.id}-{recipient.id}", type="text", is_dm=True)
+    db.add(channel)
+    db.flush()
+    db.add(DMChannelMember(channel_id=channel.id, user_id=current_user.id))
+    db.add(DMChannelMember(channel_id=channel.id, user_id=recipient.id))
+    db.commit()
+    db.refresh(channel)
+    return DMChannelOut(id=channel.id, recipient=UserOut.model_validate(recipient))
+
+
 @app.get("/servers", response_model=list[ServerOut])
 def list_servers(
     current_user: User = Depends(get_current_user),
@@ -314,6 +401,22 @@ def require_membership(db: Session, user_id: str, server_id: str) -> None:
     )
     if not membership:
         raise HTTPException(status_code=403, detail="Not a server member")
+
+
+def require_channel_access(db: Session, user_id: str, channel: Channel) -> None:
+    if channel.is_dm:
+        dm_member = db.scalar(
+            select(DMChannelMember).where(
+                (DMChannelMember.channel_id == channel.id)
+                & (DMChannelMember.user_id == user_id)
+            )
+        )
+        if not dm_member:
+            raise HTTPException(status_code=403, detail="Not a DM participant")
+    else:
+        if not channel.server_id:
+            raise HTTPException(status_code=403, detail="Invalid channel")
+        require_membership(db, user_id, channel.server_id)
 
 
 def _voice_config() -> tuple[str, str, str, int]:
@@ -411,7 +514,7 @@ def list_messages(
     channel = db.get(Channel, channel_id)
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    require_membership(db, current_user.id, channel.server_id)
+    require_channel_access(db, current_user.id, channel)
 
     stmt = select(Message).where(Message.channel_id == channel_id)
     if before:
@@ -437,7 +540,7 @@ def create_message(
     channel = db.get(Channel, channel_id)
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    require_membership(db, current_user.id, channel.server_id)
+    require_channel_access(db, current_user.id, channel)
 
     message = Message(
         channel_id=channel_id,
@@ -513,7 +616,7 @@ def create_message_with_attachment(
     channel = db.get(Channel, channel_id)
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    require_membership(db, current_user.id, channel.server_id)
+    require_channel_access(db, current_user.id, channel)
 
     if not payload.content.strip() and not payload.attachment_url:
         raise HTTPException(status_code=400, detail="Message must have content or attachment")
@@ -560,7 +663,7 @@ def update_message(
     channel = db.get(Channel, channel_id)
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    require_membership(db, current_user.id, channel.server_id)
+    require_channel_access(db, current_user.id, channel)
 
     message.content = payload.content
     message.edited_at = dt.datetime.now(dt.timezone.utc)
@@ -597,7 +700,7 @@ def delete_message(
     channel = db.get(Channel, channel_id)
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    require_membership(db, current_user.id, channel.server_id)
+    require_channel_access(db, current_user.id, channel)
 
     db.delete(message)
     db.commit()
@@ -638,7 +741,7 @@ def get_reactions(
     channel = db.get(Channel, channel_id)
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    require_membership(db, current_user.id, channel.server_id)
+    require_channel_access(db, current_user.id, channel)
     return _aggregate_reactions(message, db)
 
 
@@ -656,7 +759,7 @@ def toggle_reaction(
     channel = db.get(Channel, channel_id)
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    require_membership(db, current_user.id, channel.server_id)
+    require_channel_access(db, current_user.id, channel)
 
     existing = db.scalar(
         select(Reaction).where(
@@ -701,7 +804,7 @@ def create_voice_token(
     if channel.type != "voice":
         raise HTTPException(status_code=400, detail="Channel is not a voice channel")
 
-    require_membership(db, current_user.id, channel.server_id)
+    require_channel_access(db, current_user.id, channel)
 
     livekit_url, api_key, api_secret, ttl_minutes = _voice_config()
     if not livekit_url or not api_key or not api_secret:
@@ -763,7 +866,7 @@ async def channel_socket(
             return
 
         try:
-            require_membership(db, user.id, channel.server_id)
+            require_channel_access(db, user.id, channel)
         except HTTPException:
             await websocket.close(code=1008)
             return
@@ -811,6 +914,7 @@ async def serve_spa(full_path: str) -> FileResponse:
         "docs",
         "openapi.json",
         "redoc",
+        "dm",
         "upload",
         "uploads",
     }

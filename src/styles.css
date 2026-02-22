@@ -923,6 +923,122 @@ input {
   background: #4e5058;
 }
 
+.dm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.dm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+}
+
+.dm-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.dm-search {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 6px;
+}
+
+.dm-search-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-normal);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.dm-search-input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.dm-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dm-search-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+}
+
+.dm-search-result:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dm-no-results {
+  padding: 4px 10px;
+}
+
+.dm-channels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dm-channel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.2s, color 0.2s;
+}
+
+.dm-channel:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-normal);
+}
+
+.dm-channel.active {
+  background: #3f4147;
+  color: var(--text-normal);
+}
+
+.dm-channel-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dm-empty {
+  padding: 8px 10px;
+}
+
 .voice-status-bar {
   padding: 10px;
   border-radius: var(--radius);

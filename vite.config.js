@@ -7,6 +7,7 @@ export default defineConfig({
     proxy: {
       "/auth": "http://127.0.0.1:8000",
       "/users": "http://127.0.0.1:8000",
+      "/dm": "http://127.0.0.1:8000",
       "/servers": "http://127.0.0.1:8000",
       "/channels": "http://127.0.0.1:8000",
       "/voice": "http://127.0.0.1:8000",

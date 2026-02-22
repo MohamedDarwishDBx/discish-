@@ -23,6 +23,7 @@ import VoiceStatusBar from "./components/VoiceStatusBar";
 import MemberRail from "./components/MemberRail";
 import ProfileCard from "./components/ProfileCard";
 import TypingIndicator from "./components/TypingIndicator";
+import DMList from "./components/DMList";
 
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
@@ -54,6 +55,10 @@ export default function App() {
   const [inviteCopied, setInviteCopied] = useState(false);
   const [memberRailOpen, setMemberRailOpen] = useState(true);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [dmChannels, setDmChannels] = useState([]);
+  const [activeDM, setActiveDM] = useState(null);
+  const [dmSearchQuery, setDmSearchQuery] = useState("");
+  const [dmSearchResults, setDmSearchResults] = useState([]);
   const messageListRef = useRef(null);
   const socketRef = useRef(null);
   const roomRef = useRef(null);
@@ -251,6 +256,35 @@ export default function App() {
   };
 
   useEffect(() => { if (user) loadServers(); }, [user]);
+
+  const loadDMChannels = async () => {
+    if (!token) return;
+    try {
+      const data = await api("/dm", { token });
+      setDmChannels(data);
+    } catch (err) { setError(err.message); }
+  };
+
+  useEffect(() => { if (user) loadDMChannels(); }, [user]);
+
+  const searchUsers = async (query) => {
+    if (!query.trim() || !token) { setDmSearchResults([]); return; }
+    try {
+      const data = await api(`/users/search?q=${encodeURIComponent(query)}`, { token });
+      setDmSearchResults(data);
+    } catch (err) { setDmSearchResults([]); }
+  };
+
+  const startDM = async (recipientId) => {
+    if (!token) return;
+    try {
+      const dm = await api("/dm", { method: "POST", body: { recipient_id: recipientId }, token });
+      await loadDMChannels();
+      setActiveDM(dm);
+      setActiveServerId(null);
+      setActiveChannelId(dm.id);
+    } catch (err) { setError(err.message); }
+  };
 
   useEffect(() => {
     if (!token || !user) return;
@@ -470,7 +504,11 @@ export default function App() {
       <ServerRail
         servers={servers}
         activeServerId={activeServerId}
-        onSelectServer={(id) => { setActiveServerId(id); if (!id) setActiveChannelId(null); }}
+        onSelectServer={(id) => {
+          setActiveServerId(id);
+          if (!id) { setActiveChannelId(null); setActiveDM(null); }
+          else { setActiveDM(null); }
+        }}
         onCreateServer={() => setShowServerModal(true)}
         onLogout={() => setAuthToken(null)}
       />
@@ -478,7 +516,7 @@ export default function App() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <button type="button" className="server-switch">
-            <span>{activeServer?.name || "Discish"}</span>
+            <span>{activeServer?.name || "Direct Messages"}</span>
             <span className="chevron">v</span>
           </button>
           <div className="sidebar-header-actions">
@@ -493,31 +531,46 @@ export default function App() {
           </div>
         </div>
 
-        <div className="sidebar-nav">
-          <button type="button" className="nav-item active">
-            <span className="nav-icon">#</span>
-            Channels
-          </button>
-        </div>
+        {activeServerId ? (
+          <>
+            <div className="sidebar-nav">
+              <button type="button" className="nav-item active">
+                <span className="nav-icon">#</span>
+                Channels
+              </button>
+            </div>
 
-        <div className="sidebar-search">
-          <input
-            value={channelSearch}
-            onChange={(e) => setChannelSearch(e.target.value)}
-            placeholder="Search channels"
+            <div className="sidebar-search">
+              <input
+                value={channelSearch}
+                onChange={(e) => setChannelSearch(e.target.value)}
+                placeholder="Search channels"
+              />
+            </div>
+
+            <ChannelList
+              textChannels={filteredTextChannels}
+              voiceChannels={filteredVoiceChannels}
+              activeChannelId={activeChannelId}
+              voiceConnected={voiceConnected}
+              voiceChannelId={voiceChannelId}
+              activeServerId={activeServerId}
+              onSelectChannel={(id) => { setActiveChannelId(id); setActiveDM(null); setSidebarOpen(false); }}
+              onCreateChannel={() => setShowChannelModal(true)}
+            />
+          </>
+        ) : (
+          <DMList
+            dmChannels={dmChannels}
+            activeDMId={activeDM?.id}
+            onSelectDM={(dm) => { setActiveDM(dm); setActiveChannelId(dm.id); setSidebarOpen(false); }}
+            onStartNewDM={startDM}
+            searchResults={dmSearchResults}
+            onSearchUsers={searchUsers}
+            searchQuery={dmSearchQuery}
+            onSearchQueryChange={setDmSearchQuery}
           />
-        </div>
-
-        <ChannelList
-          textChannels={filteredTextChannels}
-          voiceChannels={filteredVoiceChannels}
-          activeChannelId={activeChannelId}
-          voiceConnected={voiceConnected}
-          voiceChannelId={voiceChannelId}
-          activeServerId={activeServerId}
-          onSelectChannel={(id) => { setActiveChannelId(id); setSidebarOpen(false); }}
-          onCreateChannel={() => setShowChannelModal(true)}
-        />
+        )}
 
         {voiceConnected && connectedVoiceChannel ? (
           <VoiceStatusBar
@@ -542,7 +595,15 @@ export default function App() {
           <button type="button" className="icon-btn mobile-only" onClick={() => setSidebarOpen((p) => !p)}>
             Channels
           </button>
-          {activeChannel ? (
+          {activeDM && !activeServerId ? (
+            <div className="channel-title">
+              <span className="hash">@</span>
+              <div>
+                <h3>{activeDM.recipient.username}</h3>
+                <span className="muted">Direct Message</span>
+              </div>
+            </div>
+          ) : activeChannel ? (
             <div className="channel-title">
               <span className="hash">{isVoiceChannel ? ")" : "#"}</span>
               <div>
@@ -573,12 +634,26 @@ export default function App() {
 
         {error ? <div className="system-message">{error}</div> : null}
 
-        {!activeServer ? (
+        {!activeServer && !activeDM ? (
           <div className="empty-state">
             <h2>Welcome to Discish</h2>
-            <p className="muted">Join a server using an invite link, or create your own to get started.</p>
+            <p className="muted">Select a conversation or create a server to get started.</p>
             <button type="button" className="chip solid" onClick={() => setShowServerModal(true)}>Create a Server</button>
           </div>
+        ) : !activeServer && activeDM ? (
+          <>
+            <MessageList
+              ref={messageListRef}
+              displayMessages={displayMessages}
+              membersById={membersById}
+              currentUserId={user.id}
+              onEditMessage={editMessage}
+              onDeleteMessage={deleteMessage}
+              onReactMessage={reactToMessage}
+            />
+            <Composer value={composer} onChange={handleComposerChange} onSubmit={sendMessage} onUpload={uploadAndSendMessage} channelName={activeDM.recipient.username} />
+            <TypingIndicator typingUsers={typingUsers} />
+          </>
         ) : !activeChannel ? (
           <div className="empty-state">
             <h2>No channels yet</h2>

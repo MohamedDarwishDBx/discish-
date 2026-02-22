@@ -111,6 +111,18 @@ class ReactionOut(BaseModel):
     users: list[str]
 
 
+class DMChannelCreate(BaseModel):
+    recipient_id: str
+
+
+class DMChannelOut(BaseModel):
+    id: str
+    recipient: UserOut
+
+    class Config:
+        from_attributes = True
+
+
 class VoiceTokenRequest(BaseModel):
     channel_id: str
 

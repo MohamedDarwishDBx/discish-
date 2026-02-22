@@ -68,17 +68,31 @@ class Channel(Base):
     __tablename__ = "channels"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
-    server_id: Mapped[str] = mapped_column(ForeignKey("servers.id"), index=True)
+    server_id: Mapped[str | None] = mapped_column(ForeignKey("servers.id"), index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(80))
     type: Mapped[str] = mapped_column(String(20), default="text")
+    is_dm: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
-    server: Mapped["Server"] = relationship(back_populates="channels")
+    server: Mapped["Server | None"] = relationship(back_populates="channels")
     messages: Mapped[list["Message"]] = relationship(
         back_populates="channel", cascade="all, delete-orphan"
     )
+    dm_members: Mapped[list["DMChannelMember"]] = relationship(
+        back_populates="channel", cascade="all, delete-orphan"
+    )
+
+
+class DMChannelMember(Base):
+    __tablename__ = "dm_channel_members"
+
+    channel_id: Mapped[str] = mapped_column(ForeignKey("channels.id"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+
+    channel: Mapped["Channel"] = relationship(back_populates="dm_members")
+    user: Mapped["User"] = relationship()
 
 
 class Message(Base):
