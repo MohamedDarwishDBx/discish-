@@ -81,6 +81,66 @@ export default function LandingPage({ onOpenApp }) {
         </div>
       </section>
 
+      <section id="safety" className="landing-section">
+        <h2 className="section-heading">Safety First</h2>
+        <p className="section-subtext">
+          Your safety matters. Discish gives you and your community the tools to stay in control.
+        </p>
+        <div className="landing-features">
+          <div className="feature-card">
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4Zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8Z" /></svg>
+            </div>
+            <h3>Block &amp; Report</h3>
+            <p>Block anyone instantly and report abuse with one click. Your space, your rules.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2Zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2Zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2Z" /></svg>
+            </div>
+            <h3>Privacy Controls</h3>
+            <p>Control who can message you and manage your DMs. Your conversations stay private.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9Z" /></svg>
+            </div>
+            <h3>Moderation Tools</h3>
+            <p>Server owners get roles, permissions, and the ability to kick or mute members to keep things civil.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="support" className="landing-section">
+        <h2 className="section-heading">We&apos;re Here to Help</h2>
+        <p className="section-subtext">
+          Got a question or ran into a problem? We&apos;ve got you covered.
+        </p>
+        <div className="landing-features">
+          <div className="feature-card">
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18h2v-2h-2v2Zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8Zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4Z" /></svg>
+            </div>
+            <h3>Help Center</h3>
+            <p>Browse FAQs and guides to get started, set up your server, and make the most of Discish.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3Zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5Zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z" /></svg>
+            </div>
+            <h3>Community</h3>
+            <p>Join the official Discish community server to ask questions, share feedback, and meet other users.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z" /></svg>
+            </div>
+            <h3>Contact Us</h3>
+            <p>Need direct help? Reach out at <a href="mailto:support@discish.app" className="landing-link">support@discish.app</a> and we&apos;ll get back to you.</p>
+          </div>
+        </div>
+      </section>
+
       <footer className="landing-footer">
         <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish</div>
         <p>A Discord-inspired chat platform. Built for fun.</p>

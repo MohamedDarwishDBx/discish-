@@ -110,6 +110,26 @@ def on_startup() -> None:
         )
 
     Base.metadata.create_all(bind=engine)
+    _run_migrations(engine)
+
+
+def _run_migrations(eng):
+    """Add columns that create_all won't add to existing tables."""
+    stmts = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_color VARCHAR(7)",
+        "ALTER TABLE channels ADD COLUMN IF NOT EXISTS is_dm BOOLEAN DEFAULT false",
+        "ALTER TABLE channels ADD COLUMN IF NOT EXISTS category_id VARCHAR REFERENCES channel_categories(id)",
+        "ALTER TABLE channels ALTER COLUMN server_id DROP NOT NULL",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_url VARCHAR(512)",
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(255)",
+    ]
+    with eng.connect() as conn:
+        for stmt in stmts:
+            conn.execute(text(stmt))
+        conn.commit()
 
 
 @app.get("/health")
