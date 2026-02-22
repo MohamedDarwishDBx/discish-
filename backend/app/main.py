@@ -108,48 +108,48 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup() -> None:
-    import logging
-
-    log = logging.getLogger("discish.startup")
+    print("[startup] on_startup handler entered", flush=True)
 
     global _main_loop
     try:
         _main_loop = asyncio.get_running_loop()
-        log.info("Captured main event loop")
+        print("[startup] Captured main event loop", flush=True)
     except RuntimeError:
-        log.warning("No running event loop found (broadcasts will be unavailable)")
+        print("[startup] WARNING: No running event loop found", flush=True)
         _main_loop = None
 
     jwt_secret = os.getenv("JWT_SECRET", "").strip()
     if len(jwt_secret) < 32:
         raise RuntimeError("JWT_SECRET must be at least 32 characters")
-    log.info("JWT_SECRET validated")
+    print("[startup] JWT_SECRET validated", flush=True)
 
     _, livekit_api_key, livekit_api_secret, _ = _voice_config()
     if livekit_api_key and len(livekit_api_secret) < 32:
         raise RuntimeError(
             "LIVEKIT_API_SECRET must be at least 32 characters"
         )
-    log.info("LiveKit config validated")
+    print("[startup] LiveKit config validated", flush=True)
+
+    print(f"[startup] DATABASE_URL starts with: {DATABASE_URL[:30]}...", flush=True)
 
     max_retries = 5
     for attempt in range(1, max_retries + 1):
         try:
-            log.info("Connecting to database (attempt %d/%d)...", attempt, max_retries)
+            print(f"[startup] DB connect attempt {attempt}/{max_retries}...", flush=True)
             Base.metadata.create_all(bind=engine)
-            log.info("Database tables ready")
+            print("[startup] Database tables ready", flush=True)
             _run_migrations(engine)
-            log.info("Migrations complete")
+            print("[startup] Migrations complete", flush=True)
             break
         except Exception as exc:
-            log.error("Database connection attempt %d failed: %s", attempt, exc)
+            print(f"[startup] DB attempt {attempt} failed: {exc}", flush=True)
             if attempt == max_retries:
                 raise RuntimeError(
                     f"Could not connect to database after {max_retries} attempts"
                 ) from exc
             time.sleep(min(2 ** attempt, 10))
 
-    log.info("Startup complete")
+    print("[startup] Startup complete!", flush=True)
 
 
 def _run_migrations(eng):
