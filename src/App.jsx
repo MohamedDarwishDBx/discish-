@@ -27,6 +27,7 @@ import DMList from "./components/DMList";
 import FriendsList from "./components/FriendsList";
 import UserProfilePopup from "./components/UserProfilePopup";
 import ServerSettings from "./components/ServerSettings";
+import PipPreview from "./components/PipPreview";
 import {
   ChevronDownIcon,
   InviteIcon,
@@ -63,6 +64,7 @@ export default function App() {
   const [videoFeeds, setVideoFeeds] = useState([]);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [voiceOccupants, setVoiceOccupants] = useState({});
   const [showServerModal, setShowServerModal] = useState(false);
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [serverModalName, setServerModalName] = useState("");
@@ -88,6 +90,7 @@ export default function App() {
   const voiceDeafenedRef = useRef(false);
   const lastTypingSentRef = useRef(0);
   const typingTimeoutsRef = useRef({});
+  const [localScreenTrack, setLocalScreenTrack] = useState(null);
 
   /* ── Auth ── */
 
@@ -176,8 +179,10 @@ export default function App() {
     setVideoFeeds([]);
     setIsScreenSharing(false);
     setIsCameraOn(false);
+    setLocalScreenTrack(null);
     clearAudioSink(audioSinkRef);
     if (!options.keepError) setVoiceError("");
+    if (token) api("/voice/disconnect", { method: "POST", token }).catch(() => {});
   };
 
   const refreshVoiceMembers = () => {
@@ -250,14 +255,22 @@ export default function App() {
       });
 
       room.on(RoomEvent.LocalTrackPublished, (pub) => {
-        if (pub.source === Track.Source.ScreenShare) setIsScreenSharing(true);
-        else if (pub.source === Track.Source.Camera) setIsCameraOn(true);
+        if (pub.source === Track.Source.ScreenShare) {
+          setIsScreenSharing(true);
+          if (pub.track) setLocalScreenTrack(pub.track);
+        } else if (pub.source === Track.Source.Camera) {
+          setIsCameraOn(true);
+        }
         updateMembers();
       });
 
       room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
-        if (pub.source === Track.Source.ScreenShare) setIsScreenSharing(false);
-        else if (pub.source === Track.Source.Camera) setIsCameraOn(false);
+        if (pub.source === Track.Source.ScreenShare) {
+          setIsScreenSharing(false);
+          setLocalScreenTrack(null);
+        } else if (pub.source === Track.Source.Camera) {
+          setIsCameraOn(false);
+        }
         updateMembers();
       });
 
@@ -347,6 +360,16 @@ export default function App() {
       const data = JSON.parse(event.data);
       if (data.event === "presence.update") {
         setPresenceMap((prev) => ({ ...prev, [data.user_id]: data.status }));
+      } else if (data.event === "voice.occupants") {
+        setVoiceOccupants((prev) => {
+          const next = { ...prev };
+          if (data.members && data.members.length > 0) {
+            next[data.channel_id] = data.members;
+          } else {
+            delete next[data.channel_id];
+          }
+          return next;
+        });
       }
     };
     presenceSocketRef.current = ws;
@@ -423,6 +446,7 @@ export default function App() {
         ]);
         setChannels(ch);
         setMembers(mem);
+        api(`/voice/occupants/${activeServerId}`, { token }).then(setVoiceOccupants).catch(() => {});
         if (ch.length > 0) setActiveChannelId((prev) => ch.some((c) => c.id === prev) ? prev : ch[0].id);
         else setActiveChannelId(null);
       } catch (err) { setError(err.message); }
@@ -693,6 +717,8 @@ export default function App() {
               voiceChannelId={voiceChannelId}
               activeServerId={activeServerId}
               unreadCounts={unreadCounts}
+              voiceOccupants={voiceOccupants}
+              voiceMembers={voiceMembers}
               onSelectChannel={(id) => { setActiveChannelId(id); setActiveDM(null); setSidebarOpen(false); }}
               onCreateChannel={() => setShowChannelModal(true)}
               onRenameChannel={renameChannel}
@@ -715,6 +741,7 @@ export default function App() {
         {voiceConnected && connectedVoiceChannel ? (
           <VoiceStatusBar
             channel={connectedVoiceChannel}
+            isScreenSharing={isScreenSharing}
             onGoToChannel={() => setActiveChannelId(connectedVoiceChannel.id)}
             onDisconnect={disconnectVoice}
           />
@@ -933,6 +960,10 @@ export default function App() {
             setProfilePopupUser(updated);
           }}
         />
+      ) : null}
+
+      {isScreenSharing && localScreenTrack ? (
+        <PipPreview track={localScreenTrack} onStopSharing={toggleScreenShare} />
       ) : null}
     </div>
   );

@@ -1,12 +1,18 @@
-import { VoiceIcon } from "./Icons";
+import { VoiceIcon, ScreenShareIcon } from "./Icons";
 
-export default function VoiceStatusBar({ channel, onGoToChannel, onDisconnect }) {
+export default function VoiceStatusBar({ channel, isScreenSharing, onGoToChannel, onDisconnect }) {
   return (
-    <div className="voice-status-bar">
+    <div className={`voice-status-bar ${isScreenSharing ? "streaming" : ""}`}>
       <div className="voice-status-info">
-        <span className="voice-status-dot" />
+        <span className={`voice-status-dot ${isScreenSharing ? "dot-red" : ""}`} />
         <div>
-          <p className="voice-status-label">Voice Connected</p>
+          <p className="voice-status-label">
+            {isScreenSharing ? (
+              <><ScreenShareIcon size={14} /> Screen Sharing</>
+            ) : (
+              "Voice Connected"
+            )}
+          </p>
           <button
             type="button"
             className="voice-status-channel"

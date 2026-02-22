@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { HashIcon, VoiceIcon, PlusIcon, EditIcon, TrashIcon } from "./Icons";
+import { HashIcon, VoiceIcon, PlusIcon, EditIcon, TrashIcon, ScreenShareIcon } from "./Icons";
+import { pickColor, initialsFromName } from "../utils/helpers";
 import Modal from "./Modal";
 
 export default function ChannelList({
@@ -10,6 +11,8 @@ export default function ChannelList({
   voiceChannelId,
   activeServerId,
   unreadCounts,
+  voiceOccupants = {},
+  voiceMembers = [],
   onSelectChannel,
   onCreateChannel,
   onRenameChannel,
@@ -85,6 +88,32 @@ export default function ChannelList({
     );
   };
 
+  const screenSharingIds = new Set(voiceMembers.filter((m) => m.isScreenSharing).map((m) => m.id));
+
+  const renderVoiceOccupants = (channelId) => {
+    const occupants = voiceOccupants[channelId];
+    if (!occupants || occupants.length === 0) return null;
+    return (
+      <div className="voice-occupant-list">
+        {occupants.map((occ) => (
+          <div key={occ.user_id} className="voice-occupant">
+            {occ.avatar_url ? (
+              <img src={occ.avatar_url} alt="" className="voice-occupant-avatar" />
+            ) : (
+              <span className="voice-occupant-avatar" style={{ background: pickColor(occ.username) }}>
+                {initialsFromName(occ.username)}
+              </span>
+            )}
+            <span className="voice-occupant-name">{occ.username}</span>
+            {screenSharingIds.has(occ.user_id) ? (
+              <span className="voice-occupant-live"><ScreenShareIcon size={12} /></span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="channel-group">
@@ -105,7 +134,12 @@ export default function ChannelList({
             <button type="button" className="group-action" onClick={onCreateChannel}><PlusIcon size={16} /></button>
           ) : null}
         </div>
-        {voiceChannels.map((channel) => renderChannel(channel, <VoiceIcon size={16} />))}
+        {voiceChannels.map((channel) => (
+          <div key={channel.id}>
+            {renderChannel(channel, <VoiceIcon size={16} />)}
+            {renderVoiceOccupants(channel.id)}
+          </div>
+        ))}
         {voiceChannels.length === 0 ? <p className="muted">No voice channels</p> : null}
       </div>
 

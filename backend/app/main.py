@@ -61,6 +61,7 @@ app = FastAPI(title="Discord-like API", version="0.1.0")
 manager = ConnectionManager()
 _presence: dict[str, str] = {}
 _presence_sockets: set[WebSocket] = set()
+_voice_occupants: dict[str, list[dict]] = {}  # channel_id -> [{user_id, username, avatar_url}]
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DIST_DIR = PROJECT_ROOT / "dist"
 INDEX_FILE = DIST_DIR / "index.html"
@@ -702,6 +703,28 @@ def require_channel_access(db: Session, user_id: str, channel: Channel) -> None:
         require_membership(db, user_id, channel.server_id)
 
 
+async def _broadcast_voice_occupants(channel_id: str) -> None:
+    members = _voice_occupants.get(channel_id, [])
+    payload = {"event": "voice.occupants", "channel_id": channel_id, "members": members}
+    for ws in list(_presence_sockets):
+        try:
+            await ws.send_json(payload)
+        except Exception:
+            _presence_sockets.discard(ws)
+
+
+def _remove_voice_occupant(user_id: str) -> str | None:
+    """Remove user from any voice channel they occupy. Returns channel_id or None."""
+    for ch_id, members in list(_voice_occupants.items()):
+        before = len(members)
+        _voice_occupants[ch_id] = [m for m in members if m["user_id"] != user_id]
+        if len(_voice_occupants[ch_id]) != before:
+            if not _voice_occupants[ch_id]:
+                del _voice_occupants[ch_id]
+            return ch_id
+    return None
+
+
 def _voice_config() -> tuple[str, str, str, int]:
     livekit_url = os.getenv("LIVEKIT_URL", "").strip()
     api_key = os.getenv("LIVEKIT_API_KEY", "").strip()
@@ -1288,7 +1311,7 @@ async def toggle_reaction(
 
 
 @app.post("/voice/token", response_model=VoiceTokenOut)
-def create_voice_token(
+async def create_voice_token(
     payload: VoiceTokenRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1333,6 +1356,16 @@ def create_voice_token(
         .to_jwt()
     )
 
+    old_ch = _remove_voice_occupant(current_user.id)
+    if old_ch:
+        await _broadcast_voice_occupants(old_ch)
+
+    occupant = {"user_id": current_user.id, "username": current_user.username, "avatar_url": current_user.avatar_url}
+    members = _voice_occupants.setdefault(payload.channel_id, [])
+    if not any(m["user_id"] == current_user.id for m in members):
+        members.append(occupant)
+    await _broadcast_voice_occupants(payload.channel_id)
+
     return VoiceTokenOut(
         token=token,
         url=livekit_url,
@@ -1340,6 +1373,35 @@ def create_voice_token(
         identity=current_user.id,
         name=current_user.username,
     )
+
+
+@app.post("/voice/disconnect", status_code=204)
+async def voice_disconnect(
+    current_user: User = Depends(get_current_user),
+) -> None:
+    ch_id = _remove_voice_occupant(current_user.id)
+    if ch_id:
+        await _broadcast_voice_occupants(ch_id)
+
+
+@app.get("/voice/occupants/{server_id}")
+def voice_occupants(
+    server_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_membership(db, current_user.id, server_id)
+    channels = db.scalars(
+        select(Channel).where(
+            (Channel.server_id == server_id) & (Channel.type == "voice")
+        )
+    ).all()
+    result = {}
+    for ch in channels:
+        members = _voice_occupants.get(ch.id, [])
+        if members:
+            result[ch.id] = members
+    return result
 
 
 @app.websocket("/ws/channels/{channel_id}")
@@ -1447,6 +1509,10 @@ async def presence_socket(
                 await ws.send_json(offline_payload)
             except Exception:
                 _presence_sockets.discard(ws)
+
+        voice_ch = _remove_voice_occupant(user_id)
+        if voice_ch:
+            await _broadcast_voice_occupants(voice_ch)
 
 
 @app.get("/presence")

@@ -2562,35 +2562,43 @@ input {
   padding: 4px 10px;
   border-radius: 6px;
   backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* ── Webcam in participant card ── */
-
-.webcam-container {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  overflow: hidden;
+.live-badge {
+  display: inline-block;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  animation: live-pulse 2s ease-in-out infinite;
 }
 
-.webcam-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .screen-icon {
   color: var(--success);
 }
 
+/* ── Participant grid ── */
+
 .voice-participants-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
 }
 
 .voice-participant-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2598,14 +2606,80 @@ input {
   padding: 16px 8px;
   border-radius: 12px;
   background: rgba(17, 18, 20, 0.6);
-  border: 1px solid var(--border);
-  transition: border-color 0.2s;
+  border: 2px solid var(--border);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
 }
 
 .voice-participant-card.speaking {
   border-color: var(--success);
   box-shadow: 0 0 12px rgba(35, 165, 90, 0.15);
 }
+
+.voice-participant-card.is-streaming {
+  border-color: var(--danger);
+  box-shadow: 0 0 16px rgba(237, 66, 69, 0.2);
+}
+
+.voice-participant-card.has-video {
+  padding: 0;
+  aspect-ratio: 16 / 9;
+}
+
+.participant-live-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  z-index: 2;
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+/* ── Video tile (camera on) ── */
+
+.video-tile {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-tile .webcam-video,
+.video-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.voice-participant-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.voice-participant-info.overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px 8px 8px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  border-radius: 0 0 10px 10px;
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 6px;
+}
+
+/* ── Avatar ring (no camera) ── */
 
 .voice-avatar-ring {
   width: 56px;
@@ -2635,7 +2709,7 @@ input {
 .voice-participant-name {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-normal);
+  color: #fff;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2666,6 +2740,137 @@ input {
   text-align: center;
   padding: 32px 0;
   grid-column: 1 / -1;
+}
+
+/* ── Voice occupant list under channels ── */
+
+.voice-occupant-list {
+  padding: 2px 0 4px 28px;
+}
+
+.voice-occupant {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.voice-occupant:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.voice-occupant-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.voice-occupant-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-occupant-live {
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── PIP overlay ── */
+
+.pip-overlay {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  width: 280px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  border: 2px solid var(--danger);
+  background: #000;
+}
+
+.pip-video-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.pip-video-container video,
+.pip-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.pip-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.pip-label {
+  font-size: 11px;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.pip-stop-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--danger);
+  background: rgba(237, 66, 69, 0.15);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.pip-stop-btn:hover {
+  background: rgba(237, 66, 69, 0.3);
+}
+
+/* ── Voice status bar streaming variant ── */
+
+.voice-status-bar.streaming {
+  background: rgba(237, 66, 69, 0.12);
+  border-color: rgba(237, 66, 69, 0.25);
+}
+
+.voice-status-bar.streaming .voice-status-label {
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.voice-status-dot.dot-red {
+  background: var(--danger);
+}
+
+.voice-quality-dot.live {
+  background: var(--danger);
 }
 
 .member-rail {
@@ -2898,5 +3103,15 @@ input {
 
   .voice-controls {
     flex-wrap: wrap;
+  }
+
+  .voice-participants-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .pip-overlay {
+    width: 200px;
+    bottom: 12px;
+    right: 12px;
   }
 }
