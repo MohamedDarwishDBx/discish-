@@ -150,26 +150,71 @@ def on_startup() -> None:
     print("[startup] Startup complete!", flush=True)
 
 
+def _column_exists(conn, table: str, column: str) -> bool:
+    result = conn.execute(
+        text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = :t AND column_name = :c"
+        ),
+        {"t": table, "c": column},
+    )
+    return result.scalar() is not None
+
+
 def _run_migrations(eng):
     """Add columns that create_all won't add to existing tables."""
-    stmts = [
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512)",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_color VARCHAR(7)",
-        "ALTER TABLE channels ADD COLUMN IF NOT EXISTS is_dm BOOLEAN DEFAULT false",
-        "ALTER TABLE channels ADD COLUMN IF NOT EXISTS category_id VARCHAR REFERENCES channel_categories(id)",
-        "ALTER TABLE channels ALTER COLUMN server_id DROP NOT NULL",
-        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ",
-        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_url VARCHAR(512)",
-        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(255)",
+    add_columns = [
+        ("users", "avatar_url", "ALTER TABLE users ADD COLUMN avatar_url VARCHAR(512)"),
+        ("users", "bio", "ALTER TABLE users ADD COLUMN bio TEXT"),
+        ("users", "banner_color", "ALTER TABLE users ADD COLUMN banner_color VARCHAR(7)"),
+        ("channels", "is_dm", "ALTER TABLE channels ADD COLUMN is_dm BOOLEAN DEFAULT false"),
+        ("channels", "category_id", "ALTER TABLE channels ADD COLUMN category_id VARCHAR REFERENCES channel_categories(id)"),
+        ("messages", "edited_at", "ALTER TABLE messages ADD COLUMN edited_at TIMESTAMPTZ"),
+        ("messages", "attachment_url", "ALTER TABLE messages ADD COLUMN attachment_url VARCHAR(512)"),
+        ("messages", "attachment_name", "ALTER TABLE messages ADD COLUMN attachment_name VARCHAR(255)"),
     ]
+
     print("[migrations] Opening connection...", flush=True)
     with eng.connect() as conn:
         conn.execute(text("SET lock_timeout = '5s'"))
         conn.execute(text("SET statement_timeout = '10s'"))
-        for i, stmt in enumerate(stmts, 1):
-            print(f"[migrations] ({i}/{len(stmts)}) {stmt[:60]}...", flush=True)
-            conn.execute(text(stmt))
+
+        # Terminate stale connections from crashed deploys that may hold locks
+        try:
+            conn.execute(text(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                "WHERE pid != pg_backend_pid() "
+                "AND state = 'idle in transaction' "
+                "AND query_start < now() - interval '30 seconds'"
+            ))
+        except Exception:
+            pass
+
+        needed = []
+        for table, col, stmt in add_columns:
+            if not _column_exists(conn, table, col):
+                needed.append((table, col, stmt))
+
+        if not needed:
+            print("[migrations] All columns already exist, nothing to do", flush=True)
+        else:
+            for i, (table, col, stmt) in enumerate(needed, 1):
+                print(f"[migrations] ({i}/{len(needed)}) Adding {table}.{col}...", flush=True)
+                conn.execute(text(stmt))
+
+        # Ensure server_id is nullable
+        is_nullable = conn.execute(
+            text(
+                "SELECT is_nullable FROM information_schema.columns "
+                "WHERE table_name = 'channels' AND column_name = 'server_id'"
+            )
+        ).scalar()
+        if is_nullable == "NO":
+            print("[migrations] Making channels.server_id nullable...", flush=True)
+            conn.execute(text("ALTER TABLE channels ALTER COLUMN server_id DROP NOT NULL"))
+        else:
+            print("[migrations] channels.server_id already nullable", flush=True)
+
         print("[migrations] Committing...", flush=True)
         conn.commit()
     print("[migrations] Done", flush=True)
