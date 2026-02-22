@@ -130,8 +130,6 @@ def on_startup() -> None:
         )
     print("[startup] LiveKit config validated", flush=True)
 
-    print(f"[startup] DATABASE_URL starts with: {DATABASE_URL[:30]}...", flush=True)
-
     max_retries = 5
     for attempt in range(1, max_retries + 1):
         try:
