@@ -682,11 +682,12 @@ export default function App() {
               displayMessages={displayMessages}
               membersById={membersById}
               currentUserId={user.id}
+              currentUsername={user.username}
               onEditMessage={editMessage}
               onDeleteMessage={deleteMessage}
               onReactMessage={reactToMessage}
             />
-            <Composer value={composer} onChange={handleComposerChange} onSubmit={sendMessage} onUpload={uploadAndSendMessage} channelName={activeDM.recipient.username} />
+            <Composer value={composer} onChange={handleComposerChange} onSubmit={sendMessage} onUpload={uploadAndSendMessage} channelName={activeDM.recipient.username} members={members} />
             <TypingIndicator typingUsers={typingUsers} />
           </>
         ) : !activeChannel ? (
@@ -719,11 +720,12 @@ export default function App() {
               displayMessages={displayMessages}
               membersById={membersById}
               currentUserId={user.id}
+              currentUsername={user.username}
               onEditMessage={editMessage}
               onDeleteMessage={deleteMessage}
               onReactMessage={reactToMessage}
             />
-            <Composer value={composer} onChange={handleComposerChange} onSubmit={sendMessage} onUpload={uploadAndSendMessage} channelName={activeChannel.name} />
+            <Composer value={composer} onChange={handleComposerChange} onSubmit={sendMessage} onUpload={uploadAndSendMessage} channelName={activeChannel.name} members={members} />
             <TypingIndicator typingUsers={typingUsers} />
           </>
         )}

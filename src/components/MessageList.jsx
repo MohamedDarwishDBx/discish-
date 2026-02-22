@@ -2,7 +2,7 @@ import { forwardRef } from "react";
 import MessageRow from "./MessageRow";
 
 const MessageList = forwardRef(function MessageList(
-  { displayMessages, membersById, currentUserId, onEditMessage, onDeleteMessage, onReactMessage },
+  { displayMessages, membersById, currentUserId, currentUsername, onEditMessage, onDeleteMessage, onReactMessage },
   ref,
 ) {
   return (
@@ -28,6 +28,7 @@ const MessageList = forwardRef(function MessageList(
             authorName={authorName}
             isOwn={message.author_id === currentUserId || message.author?.id === currentUserId}
             currentUserId={currentUserId}
+            currentUsername={currentUsername}
             onEdit={onEditMessage}
             onDelete={onDeleteMessage}
             onReact={onReactMessage}

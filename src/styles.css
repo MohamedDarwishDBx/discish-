@@ -1715,6 +1715,58 @@ input {
   fill: currentColor;
 }
 
+.composer-wrap {
+  position: relative;
+}
+
+.mention-autocomplete {
+  position: absolute;
+  bottom: 100%;
+  left: 12px;
+  right: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  margin-bottom: 4px;
+}
+
+.mention-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mention-option:hover,
+.mention-option.active {
+  background: rgba(88, 101, 242, 0.15);
+}
+
+.mention {
+  color: var(--brand);
+  background: rgba(88, 101, 242, 0.1);
+  padding: 0 2px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.mention-self {
+  background: rgba(88, 101, 242, 0.2);
+}
+
 .send-spinner {
   width: 16px;
   height: 16px;

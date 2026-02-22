@@ -2,13 +2,27 @@ import { useState } from "react";
 import { pickColor, initialsFromName, formatTime } from "../utils/helpers";
 import EmojiPicker from "./EmojiPicker";
 
+function renderWithMentions(text, currentUsername) {
+  if (!text) return null;
+  const parts = text.split(/(@\w+)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("@")) {
+      const isSelf = currentUsername && part.slice(1).toLowerCase() === currentUsername.toLowerCase();
+      return (
+        <span key={i} className={`mention ${isSelf ? "mention-self" : ""}`}>{part}</span>
+      );
+    }
+    return part;
+  });
+}
+
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp"];
 function isImageUrl(url) {
   if (!url) return false;
   return IMAGE_EXTENSIONS.some((ext) => url.toLowerCase().endsWith(ext));
 }
 
-export default function MessageRow({ message, authorName, isOwn, currentUserId, onEdit, onDelete, onReact }) {
+export default function MessageRow({ message, authorName, isOwn, currentUserId, currentUsername, onEdit, onDelete, onReact }) {
   const [hovering, setHovering] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(message.content);
@@ -69,7 +83,7 @@ export default function MessageRow({ message, authorName, isOwn, currentUserId, 
           </form>
         ) : (
           <>
-            {message.content ? <p className="message-text">{message.content}</p> : null}
+            {message.content ? <p className="message-text">{renderWithMentions(message.content, currentUsername)}</p> : null}
             {message.attachment_url ? (
               <div className="message-attachment">
                 {isImageUrl(message.attachment_url) ? (
