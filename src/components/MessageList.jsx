@@ -1,7 +1,10 @@
 import { forwardRef } from "react";
 import MessageRow from "./MessageRow";
 
-const MessageList = forwardRef(function MessageList({ displayMessages, membersById }, ref) {
+const MessageList = forwardRef(function MessageList(
+  { displayMessages, membersById, currentUserId, onEditMessage, onDeleteMessage },
+  ref,
+) {
   return (
     <section className="messages" ref={ref}>
       {displayMessages.map((message) => {
@@ -18,7 +21,16 @@ const MessageList = forwardRef(function MessageList({ displayMessages, membersBy
           membersById[message.author_id]?.username ||
           "Unknown";
 
-        return <MessageRow key={message.id} message={message} authorName={authorName} />;
+        return (
+          <MessageRow
+            key={message.id}
+            message={message}
+            authorName={authorName}
+            isOwn={message.author_id === currentUserId || message.author?.id === currentUserId}
+            onEdit={onEditMessage}
+            onDelete={onDeleteMessage}
+          />
+        );
       })}
     </section>
   );

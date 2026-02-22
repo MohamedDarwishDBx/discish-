@@ -1169,10 +1169,11 @@ input {
 
 .message-row {
   display: grid;
-  grid-template-columns: 40px 1fr;
+  grid-template-columns: 40px 1fr auto;
   gap: 12px;
   padding: 6px 8px;
   border-radius: 8px;
+  position: relative;
 }
 
 .message-row:hover {
@@ -1208,6 +1209,88 @@ input {
   color: var(--text-normal);
   font-size: 14px;
   line-height: 1.45;
+}
+
+.message-edited {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.message-actions {
+  display: flex;
+  gap: 2px;
+  align-self: start;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.message-row:hover .message-actions {
+  opacity: 1;
+}
+
+.msg-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.msg-action-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.msg-action-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-normal);
+}
+
+.msg-action-btn.danger:hover {
+  color: var(--danger);
+  border-color: rgba(237, 66, 69, 0.3);
+  background: rgba(237, 66, 69, 0.1);
+}
+
+.message-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.message-edit-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--brand);
+  background: var(--bg-tertiary);
+  color: var(--text-normal);
+  font-size: 14px;
+  outline: none;
+}
+
+.message-edit-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.link-btn-inline {
+  border: none;
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.link-btn-inline:hover {
+  text-decoration: underline;
 }
 
 .system-message {

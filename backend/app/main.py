@@ -30,6 +30,7 @@ from .schemas import (
     MemberOut,
     MessageCreate,
     MessageOut,
+    MessageUpdate,
     ServerCreate,
     ServerOut,
     Token,
@@ -449,6 +450,75 @@ def create_message(
         pass
 
     return message
+
+
+@app.put("/channels/{channel_id}/messages/{message_id}", response_model=MessageOut)
+def update_message(
+    channel_id: str,
+    message_id: str,
+    payload: MessageUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MessageOut:
+    message = db.get(Message, message_id)
+    if not message or message.channel_id != channel_id:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if message.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot edit another user's message")
+
+    channel = db.get(Channel, channel_id)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    require_membership(db, current_user.id, channel.server_id)
+
+    message.content = payload.content
+    message.edited_at = dt.datetime.now(dt.timezone.utc)
+    db.commit()
+    db.refresh(message)
+
+    payload_out = MessageOut.model_validate(message).model_dump()
+    payload_out["event"] = "message.updated"
+    payload_out["author"] = {"id": current_user.id, "username": current_user.username}
+
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(manager.broadcast(channel_id, payload_out))
+    except RuntimeError:
+        pass
+
+    return message
+
+
+@app.delete("/channels/{channel_id}/messages/{message_id}", status_code=204)
+def delete_message(
+    channel_id: str,
+    message_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    message = db.get(Message, message_id)
+    if not message or message.channel_id != channel_id:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if message.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot delete another user's message")
+
+    channel = db.get(Channel, channel_id)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    require_membership(db, current_user.id, channel.server_id)
+
+    db.delete(message)
+    db.commit()
+
+    payload_out = {"event": "message.deleted", "id": message_id, "channel_id": channel_id}
+
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(manager.broadcast(channel_id, payload_out))
+    except RuntimeError:
+        pass
 
 
 @app.post("/voice/token", response_model=VoiceTokenOut)

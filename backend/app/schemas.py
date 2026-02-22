@@ -61,12 +61,17 @@ class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
 
 
+class MessageUpdate(BaseModel):
+    content: str = Field(min_length=1, max_length=4000)
+
+
 class MessageOut(BaseModel):
     id: str
     channel_id: str
     author_id: str
     content: str
     created_at: dt.datetime
+    edited_at: dt.datetime | None = None
 
     class Config:
         from_attributes = True

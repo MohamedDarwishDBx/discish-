@@ -297,6 +297,10 @@ export default function App() {
       const payload = JSON.parse(event.data);
       if (payload.event === "message.created") {
         setMessages((prev) => prev.some((m) => m.id === payload.id) ? prev : [...prev, payload]);
+      } else if (payload.event === "message.updated") {
+        setMessages((prev) => prev.map((m) => m.id === payload.id ? { ...m, content: payload.content, edited_at: payload.edited_at } : m));
+      } else if (payload.event === "message.deleted") {
+        setMessages((prev) => prev.filter((m) => m.id !== payload.id));
       }
     };
     socketRef.current = ws;
@@ -364,6 +368,24 @@ export default function App() {
       const msg = await api(`/channels/${activeChannelId}/messages`, { method: "POST", body: { content: composer }, token });
       setComposer("");
       setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, author: { id: user.id, username: user.username } }]);
+    } catch (err) { setError(err.message); }
+  };
+
+  const editMessage = async (messageId, newContent) => {
+    if (!activeChannelId) return;
+    try {
+      const updated = await api(`/channels/${activeChannelId}/messages/${messageId}`, {
+        method: "PUT", body: { content: newContent }, token,
+      });
+      setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, content: updated.content, edited_at: updated.edited_at } : m));
+    } catch (err) { setError(err.message); }
+  };
+
+  const deleteMessage = async (messageId) => {
+    if (!activeChannelId) return;
+    try {
+      await api(`/channels/${activeChannelId}/messages/${messageId}`, { method: "DELETE", token });
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
     } catch (err) { setError(err.message); }
   };
 
@@ -513,7 +535,14 @@ export default function App() {
           />
         ) : (
           <>
-            <MessageList ref={messageListRef} displayMessages={displayMessages} membersById={membersById} />
+            <MessageList
+              ref={messageListRef}
+              displayMessages={displayMessages}
+              membersById={membersById}
+              currentUserId={user.id}
+              onEditMessage={editMessage}
+              onDeleteMessage={deleteMessage}
+            />
             <Composer value={composer} onChange={setComposer} onSubmit={sendMessage} channelName={activeChannel.name} />
           </>
         )}
