@@ -80,9 +80,10 @@ class CategoryOut(BaseModel):
 
 class ChannelOut(BaseModel):
     id: str
-    server_id: str
+    server_id: str | None = None
     name: str
     type: str
+    is_dm: bool = False
     category_id: str | None = None
 
     class Config:
