@@ -203,7 +203,7 @@ async def security_middleware(request: Request, call_next):
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault(
         "Permissions-Policy",
-        "camera=(), geolocation=(), interest-cohort=(), microphone=(self)",
+        "camera=(self), microphone=(self), display-capture=(self), geolocation=(), interest-cohort=()",
     )
     response.headers.setdefault(
         "Content-Security-Policy",
