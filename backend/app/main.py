@@ -163,10 +163,16 @@ def _run_migrations(eng):
         "ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_url VARCHAR(512)",
         "ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(255)",
     ]
+    print("[migrations] Opening connection...", flush=True)
     with eng.connect() as conn:
-        for stmt in stmts:
+        conn.execute(text("SET lock_timeout = '5s'"))
+        conn.execute(text("SET statement_timeout = '10s'"))
+        for i, stmt in enumerate(stmts, 1):
+            print(f"[migrations] ({i}/{len(stmts)}) {stmt[:60]}...", flush=True)
             conn.execute(text(stmt))
+        print("[migrations] Committing...", flush=True)
         conn.commit()
+    print("[migrations] Done", flush=True)
 
 
 @app.get("/health")
