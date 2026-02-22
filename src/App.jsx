@@ -25,6 +25,7 @@ import ProfileCard from "./components/ProfileCard";
 import TypingIndicator from "./components/TypingIndicator";
 import DMList from "./components/DMList";
 import FriendsList from "./components/FriendsList";
+import UserProfilePopup from "./components/UserProfilePopup";
 
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
@@ -60,6 +61,7 @@ export default function App() {
   const [activeDM, setActiveDM] = useState(null);
   const [dmSearchQuery, setDmSearchQuery] = useState("");
   const [dmSearchResults, setDmSearchResults] = useState([]);
+  const [profilePopupUser, setProfilePopupUser] = useState(null);
   const messageListRef = useRef(null);
   const socketRef = useRef(null);
   const roomRef = useRef(null);
@@ -588,6 +590,7 @@ export default function App() {
           voiceDeafened={voiceDeafened}
           onToggleMute={toggleMute}
           onToggleDeafen={toggleDeafen}
+          onClickProfile={() => setProfilePopupUser(user)}
         />
       </aside>
 
@@ -691,7 +694,13 @@ export default function App() {
         )}
       </main>
 
-      {memberRailOpen ? <MemberRail members={members} currentUserId={user.id} /> : null}
+      {memberRailOpen ? (
+        <MemberRail
+          members={members}
+          currentUserId={user.id}
+          onClickMember={(member) => setProfilePopupUser({ id: member.id, username: member.username, email: "", avatar_url: null, bio: null, banner_color: null })}
+        />
+      ) : null}
 
       {sidebarOpen ? (
         <button type="button" className="scrim" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar" />
@@ -729,6 +738,19 @@ export default function App() {
           </div>
         </label>
       </Modal>
+
+      {profilePopupUser ? (
+        <UserProfilePopup
+          user={profilePopupUser}
+          isOwnProfile={profilePopupUser.id === user.id}
+          token={token}
+          onClose={() => setProfilePopupUser(null)}
+          onProfileUpdated={(updated) => {
+            if (updated.id === user.id) setUser(updated);
+            setProfilePopupUser(updated);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

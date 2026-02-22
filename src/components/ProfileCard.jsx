@@ -7,23 +7,25 @@ export default function ProfileCard({
   voiceDeafened,
   onToggleMute,
   onToggleDeafen,
+  onClickProfile,
 }) {
   return (
     <div className="profile-card">
-      <div className="profile-main">
-        <span
-          className="avatar small"
-          style={{ background: pickColor(user.username) }}
-        >
-          {initialsFromName(user.username)}
-        </span>
+      <button type="button" className="profile-main profile-main-clickable" onClick={onClickProfile}>
+        {user.avatar_url ? (
+          <img src={user.avatar_url} alt="" className="avatar small profile-card-avatar" />
+        ) : (
+          <span className="avatar small" style={{ background: pickColor(user.username) }}>
+            {initialsFromName(user.username)}
+          </span>
+        )}
         <div>
           <p>{user.username}</p>
           <span className="muted">
             {voiceConnected ? "In voice" : "Online"}
           </span>
         </div>
-      </div>
+      </button>
       <div className="profile-actions">
         <button
           type="button"

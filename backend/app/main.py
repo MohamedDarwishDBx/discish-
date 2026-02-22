@@ -44,6 +44,7 @@ from .schemas import (
     UserCreate,
     UserLogin,
     UserOut,
+    UserProfileUpdate,
     VoiceTokenOut,
     VoiceTokenRequest,
 )
@@ -272,6 +273,32 @@ def me(current_user: User = Depends(get_current_user)) -> UserOut:
     return current_user
 
 
+@app.put("/users/me", response_model=UserOut)
+def update_profile(
+    payload: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserOut:
+    if payload.username is not None:
+        existing = db.scalar(
+            select(User).where(
+                (User.username == payload.username) & (User.id != current_user.id)
+            )
+        )
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+        current_user.username = payload.username
+    if payload.bio is not None:
+        current_user.bio = payload.bio
+    if payload.banner_color is not None:
+        current_user.banner_color = payload.banner_color
+    if payload.avatar_url is not None:
+        current_user.avatar_url = payload.avatar_url
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 @app.get("/users/search", response_model=list[UserOut])
 def search_users(
     q: str = Query("", min_length=1, max_length=80),
@@ -287,6 +314,18 @@ def search_users(
         .limit(20)
     ).all()
     return results
+
+
+@app.get("/users/{user_id}", response_model=UserOut)
+def get_user_profile(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserOut:
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 @app.get("/dm", response_model=list[DMChannelOut])

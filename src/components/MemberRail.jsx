@@ -1,6 +1,6 @@
 import { pickColor, initialsFromName } from "../utils/helpers";
 
-export default function MemberRail({ members, currentUserId }) {
+export default function MemberRail({ members, currentUserId, onClickMember }) {
   return (
     <aside className="member-rail">
       <div className="member-header">
@@ -12,7 +12,12 @@ export default function MemberRail({ members, currentUserId }) {
 
       <div className="member-group">
         {members.map((member) => (
-          <div key={member.id} className="member-row">
+          <button
+            key={member.id}
+            type="button"
+            className="member-row member-row-btn"
+            onClick={() => onClickMember?.(member)}
+          >
             <div className="avatar-wrap">
               <span
                 className="avatar small"
@@ -28,7 +33,7 @@ export default function MemberRail({ members, currentUserId }) {
               <p>{member.username}</p>
               <span className="muted">{member.role}</span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </aside>

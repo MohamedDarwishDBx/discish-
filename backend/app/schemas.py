@@ -24,9 +24,19 @@ class UserOut(BaseModel):
     id: str
     username: str
     email: EmailStr
+    avatar_url: str | None = None
+    bio: str | None = None
+    banner_color: str | None = None
 
     class Config:
         from_attributes = True
+
+
+class UserProfileUpdate(BaseModel):
+    username: str | None = Field(None, min_length=2, max_length=32)
+    bio: str | None = Field(None, max_length=200)
+    banner_color: str | None = Field(None, max_length=7)
+    avatar_url: str | None = None
 
 
 class ServerCreate(BaseModel):

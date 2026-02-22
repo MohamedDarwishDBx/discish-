@@ -18,6 +18,9 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True, default=None)
+    bio: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    banner_color: Mapped[str | None] = mapped_column(String(7), nullable=True, default=None)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
