@@ -131,3 +131,21 @@ class Reaction(Base):
 
     message: Mapped["Message"] = relationship(back_populates="reactions")
     user: Mapped["User"] = relationship()
+
+
+class Friendship(Base):
+    __tablename__ = "friendships"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    requester_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    addressee_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, accepted, blocked
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+
+    requester: Mapped["User"] = relationship(foreign_keys=[requester_id])
+    addressee: Mapped["User"] = relationship(foreign_keys=[addressee_id])

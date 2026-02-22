@@ -24,6 +24,7 @@ import MemberRail from "./components/MemberRail";
 import ProfileCard from "./components/ProfileCard";
 import TypingIndicator from "./components/TypingIndicator";
 import DMList from "./components/DMList";
+import FriendsList from "./components/FriendsList";
 
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
@@ -635,11 +636,7 @@ export default function App() {
         {error ? <div className="system-message">{error}</div> : null}
 
         {!activeServer && !activeDM ? (
-          <div className="empty-state">
-            <h2>Welcome to Discish</h2>
-            <p className="muted">Select a conversation or create a server to get started.</p>
-            <button type="button" className="chip solid" onClick={() => setShowServerModal(true)}>Create a Server</button>
-          </div>
+          <FriendsList token={token} onStartDM={startDM} />
         ) : !activeServer && activeDM ? (
           <>
             <MessageList

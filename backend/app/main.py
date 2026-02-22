@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.websockets import WebSocketDisconnect
-from sqlalchemy import select, text
+from sqlalchemy import and_, or_, select, text
 from sqlalchemy.orm import Session
 
 from .auth import (
@@ -24,12 +24,13 @@ from .auth import (
     verify_password,
 )
 from .db import Base, SessionLocal, engine, get_db
-from .models import Channel, DMChannelMember, Message, Reaction, Server, ServerMembership, User
+from .models import Channel, DMChannelMember, Friendship, Message, Reaction, Server, ServerMembership, User
 from .schemas import (
     ChannelCreate,
     ChannelOut,
     DMChannelCreate,
     DMChannelOut,
+    FriendshipOut,
     MemberOut,
     MessageCreate,
     MessageCreateWithAttachment,
@@ -354,6 +355,153 @@ def create_or_get_dm_channel(
     db.commit()
     db.refresh(channel)
     return DMChannelOut(id=channel.id, recipient=UserOut.model_validate(recipient))
+
+
+@app.get("/friends", response_model=list[FriendshipOut])
+def list_friends(
+    status: str = Query("all"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[FriendshipOut]:
+    stmt = select(Friendship).where(
+        or_(
+            Friendship.requester_id == current_user.id,
+            Friendship.addressee_id == current_user.id,
+        )
+    )
+    if status != "all":
+        stmt = stmt.where(Friendship.status == status)
+
+    friendships = db.scalars(stmt).all()
+    result = []
+    for f in friendships:
+        if f.requester_id == current_user.id:
+            other_user = db.get(User, f.addressee_id)
+            incoming = False
+        else:
+            other_user = db.get(User, f.requester_id)
+            incoming = True
+        if other_user:
+            result.append(FriendshipOut(
+                id=f.id,
+                user=UserOut.model_validate(other_user),
+                status=f.status,
+                incoming=incoming,
+            ))
+    return result
+
+
+@app.post("/friends/request", response_model=FriendshipOut)
+def send_friend_request(
+    payload: DMChannelCreate,  # reuse: has recipient_id
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FriendshipOut:
+    recipient = db.get(User, payload.recipient_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="User not found")
+    if recipient.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot friend yourself")
+
+    existing = db.scalar(
+        select(Friendship).where(
+            or_(
+                and_(Friendship.requester_id == current_user.id, Friendship.addressee_id == recipient.id),
+                and_(Friendship.requester_id == recipient.id, Friendship.addressee_id == current_user.id),
+            )
+        )
+    )
+    if existing:
+        if existing.status == "blocked":
+            raise HTTPException(status_code=400, detail="Cannot send friend request")
+        if existing.status == "accepted":
+            raise HTTPException(status_code=400, detail="Already friends")
+        raise HTTPException(status_code=400, detail="Friend request already exists")
+
+    friendship = Friendship(requester_id=current_user.id, addressee_id=recipient.id, status="pending")
+    db.add(friendship)
+    db.commit()
+    db.refresh(friendship)
+    return FriendshipOut(
+        id=friendship.id,
+        user=UserOut.model_validate(recipient),
+        status="pending",
+        incoming=False,
+    )
+
+
+@app.post("/friends/{friendship_id}/accept", response_model=FriendshipOut)
+def accept_friend_request(
+    friendship_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FriendshipOut:
+    friendship = db.get(Friendship, friendship_id)
+    if not friendship:
+        raise HTTPException(status_code=404, detail="Friend request not found")
+    if friendship.addressee_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if friendship.status != "pending":
+        raise HTTPException(status_code=400, detail="Request is not pending")
+
+    friendship.status = "accepted"
+    friendship.updated_at = dt.datetime.now(dt.timezone.utc)
+    db.commit()
+    db.refresh(friendship)
+
+    other_user = db.get(User, friendship.requester_id)
+    return FriendshipOut(
+        id=friendship.id,
+        user=UserOut.model_validate(other_user),
+        status="accepted",
+        incoming=True,
+    )
+
+
+@app.post("/friends/{friendship_id}/reject", status_code=204)
+def reject_friend_request(
+    friendship_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    friendship = db.get(Friendship, friendship_id)
+    if not friendship:
+        raise HTTPException(status_code=404, detail="Friend request not found")
+    if friendship.addressee_id != current_user.id and friendship.requester_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db.delete(friendship)
+    db.commit()
+
+
+@app.post("/friends/{friendship_id}/block", response_model=FriendshipOut)
+def block_user(
+    friendship_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FriendshipOut:
+    friendship = db.get(Friendship, friendship_id)
+    if not friendship:
+        raise HTTPException(status_code=404, detail="Friendship not found")
+    if friendship.requester_id != current_user.id and friendship.addressee_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    friendship.status = "blocked"
+    friendship.updated_at = dt.datetime.now(dt.timezone.utc)
+    db.commit()
+    db.refresh(friendship)
+
+    if friendship.requester_id == current_user.id:
+        other_user = db.get(User, friendship.addressee_id)
+        incoming = False
+    else:
+        other_user = db.get(User, friendship.requester_id)
+        incoming = True
+    return FriendshipOut(
+        id=friendship.id,
+        user=UserOut.model_validate(other_user),
+        status="blocked",
+        incoming=incoming,
+    )
 
 
 @app.get("/servers", response_model=list[ServerOut])
@@ -915,6 +1063,7 @@ async def serve_spa(full_path: str) -> FileResponse:
         "openapi.json",
         "redoc",
         "dm",
+        "friends",
         "upload",
         "uploads",
     }

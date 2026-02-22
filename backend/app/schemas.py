@@ -123,6 +123,16 @@ class DMChannelOut(BaseModel):
         from_attributes = True
 
 
+class FriendshipOut(BaseModel):
+    id: str
+    user: UserOut  # the OTHER user
+    status: str
+    incoming: bool  # true if we are the addressee
+
+    class Config:
+        from_attributes = True
+
+
 class VoiceTokenRequest(BaseModel):
     channel_id: str
 
