@@ -43,6 +43,10 @@ class ServerCreate(BaseModel):
     name: str = Field(min_length=2, max_length=80)
 
 
+class ServerUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+
+
 class ServerOut(BaseModel):
     id: str
     name: str
@@ -57,11 +61,29 @@ class ChannelCreate(BaseModel):
     type: Literal["text", "voice"] = "text"
 
 
+class ChannelUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+
+
+class CategoryCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+
+
+class CategoryOut(BaseModel):
+    id: str
+    name: str
+    position: int
+
+    class Config:
+        from_attributes = True
+
+
 class ChannelOut(BaseModel):
     id: str
     server_id: str
     name: str
     type: str
+    category_id: str | None = None
 
     class Config:
         from_attributes = True
@@ -109,6 +131,10 @@ class MemberOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class RoleUpdate(BaseModel):
+    role: Literal["owner", "admin", "moderator", "member"]
 
 
 class ReactionCreate(BaseModel):

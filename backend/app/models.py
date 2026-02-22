@@ -75,6 +75,7 @@ class Channel(Base):
     name: Mapped[str] = mapped_column(String(80))
     type: Mapped[str] = mapped_column(String(20), default="text")
     is_dm: Mapped[bool] = mapped_column(default=False)
+    category_id: Mapped[str | None] = mapped_column(ForeignKey("channel_categories.id"), nullable=True, default=None)
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -86,6 +87,17 @@ class Channel(Base):
     dm_members: Mapped[list["DMChannelMember"]] = relationship(
         back_populates="channel", cascade="all, delete-orphan"
     )
+
+
+class ChannelCategory(Base):
+    __tablename__ = "channel_categories"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    server_id: Mapped[str] = mapped_column(ForeignKey("servers.id"), index=True)
+    name: Mapped[str] = mapped_column(String(80))
+    position: Mapped[int] = mapped_column(default=0)
+
+    server: Mapped["Server"] = relationship()
 
 
 class DMChannelMember(Base):

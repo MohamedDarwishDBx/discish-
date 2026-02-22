@@ -883,6 +883,52 @@ input {
   color: var(--text-normal);
 }
 
+.channel-ctx-menu {
+  position: fixed;
+  z-index: 25;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+  min-width: 140px;
+}
+
+.ctx-item {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.ctx-item:hover {
+  background: rgba(88, 101, 242, 0.15);
+}
+
+.ctx-item.danger {
+  color: var(--danger);
+}
+
+.ctx-item.danger:hover {
+  background: rgba(237, 66, 69, 0.15);
+}
+
+.transparent-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+
 .unread-badge {
   background: var(--danger);
   color: #fff;
@@ -1057,6 +1103,95 @@ input {
 
 .dm-empty {
   padding: 8px 10px;
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.settings-panel {
+  width: min(500px, calc(100% - 32px));
+  max-height: 80vh;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+  overflow-y: auto;
+  animation: modal-in 0.15s ease;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-tab {
+  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.settings-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-normal);
+}
+
+.settings-tab.active {
+  background: rgba(88, 101, 242, 0.2);
+  color: var(--text-normal);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 8px 0;
+}
+
+.danger-btn {
+  background: var(--danger) !important;
+  color: #fff !important;
+}
+
+.role-select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-normal);
+  font-size: 12px;
+  font-family: inherit;
 }
 
 .profile-popup-overlay {

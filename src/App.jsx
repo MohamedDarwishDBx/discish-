@@ -26,6 +26,7 @@ import TypingIndicator from "./components/TypingIndicator";
 import DMList from "./components/DMList";
 import FriendsList from "./components/FriendsList";
 import UserProfilePopup from "./components/UserProfilePopup";
+import ServerSettings from "./components/ServerSettings";
 
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
@@ -62,6 +63,7 @@ export default function App() {
   const [dmSearchQuery, setDmSearchQuery] = useState("");
   const [dmSearchResults, setDmSearchResults] = useState([]);
   const [profilePopupUser, setProfilePopupUser] = useState(null);
+  const [showServerSettings, setShowServerSettings] = useState(false);
   const [presenceMap, setPresenceMap] = useState({});
   const [unreadCounts, setUnreadCounts] = useState({});
   const messageListRef = useRef(null);
@@ -519,6 +521,25 @@ export default function App() {
     } catch (err) { setError(err.message); }
   };
 
+  const renameChannel = async (channelId, newName) => {
+    if (!activeServerId) return;
+    try {
+      const updated = await api(`/servers/${activeServerId}/channels/${channelId}`, {
+        method: "PUT", body: { name: newName }, token,
+      });
+      setChannels((prev) => prev.map((c) => c.id === channelId ? { ...c, name: updated.name } : c));
+    } catch (err) { setError(err.message); }
+  };
+
+  const deleteChannel = async (channelId) => {
+    if (!activeServerId) return;
+    try {
+      await api(`/servers/${activeServerId}/channels/${channelId}`, { method: "DELETE", token });
+      setChannels((prev) => prev.filter((c) => c.id !== channelId));
+      if (activeChannelId === channelId) setActiveChannelId(null);
+    } catch (err) { setError(err.message); }
+  };
+
   const reactToMessage = async (messageId, emoji) => {
     if (!activeChannelId) return;
     try {
@@ -552,9 +573,13 @@ export default function App() {
 
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
-          <button type="button" className="server-switch">
+          <button
+            type="button"
+            className="server-switch"
+            onClick={() => { if (activeServerId) setShowServerSettings(true); }}
+          >
             <span>{activeServer?.name || "Direct Messages"}</span>
-            <span className="chevron">v</span>
+            {activeServerId ? <span className="chevron">v</span> : null}
           </button>
           <div className="sidebar-header-actions">
             {activeServerId ? (
@@ -595,6 +620,8 @@ export default function App() {
               unreadCounts={unreadCounts}
               onSelectChannel={(id) => { setActiveChannelId(id); setActiveDM(null); setSidebarOpen(false); }}
               onCreateChannel={() => setShowChannelModal(true)}
+              onRenameChannel={renameChannel}
+              onDeleteChannel={deleteChannel}
             />
           </>
         ) : (
@@ -776,6 +803,43 @@ export default function App() {
           </div>
         </label>
       </Modal>
+
+      {showServerSettings && activeServer ? (
+        <>
+          <button type="button" className="scrim modal-scrim" onClick={() => setShowServerSettings(false)} aria-label="Close settings" />
+          <div className="settings-overlay">
+            <ServerSettings
+              server={activeServer}
+              members={members}
+              currentUserId={user.id}
+              token={token}
+              onClose={() => setShowServerSettings(false)}
+              onServerUpdated={(updated) => {
+                setServers((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+                setShowServerSettings(false);
+              }}
+              onServerDeleted={(id) => {
+                setServers((prev) => prev.filter((s) => s.id !== id));
+                setActiveServerId(null);
+                setActiveChannelId(null);
+                setShowServerSettings(false);
+              }}
+              onLeft={(id) => {
+                setServers((prev) => prev.filter((s) => s.id !== id));
+                setActiveServerId(null);
+                setActiveChannelId(null);
+                setShowServerSettings(false);
+              }}
+              onMembersUpdated={async () => {
+                try {
+                  const data = await api(`/servers/${activeServerId}/members`, { token });
+                  setMembers(data);
+                } catch (err) { /* ignore */ }
+              }}
+            />
+          </div>
+        </>
+      ) : null}
 
       {profilePopupUser ? (
         <UserProfilePopup

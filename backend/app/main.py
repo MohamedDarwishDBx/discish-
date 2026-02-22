@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.websockets import WebSocketDisconnect
-from sqlalchemy import and_, or_, select, text
+from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.orm import Session
 
 from .auth import (
@@ -24,10 +24,13 @@ from .auth import (
     verify_password,
 )
 from .db import Base, SessionLocal, engine, get_db
-from .models import Channel, DMChannelMember, Friendship, Message, Reaction, ReadReceipt, Server, ServerMembership, User
+from .models import Channel, ChannelCategory, DMChannelMember, Friendship, Message, Reaction, ReadReceipt, Server, ServerMembership, User
 from .schemas import (
+    CategoryCreate,
+    CategoryOut,
     ChannelCreate,
     ChannelOut,
+    ChannelUpdate,
     DMChannelCreate,
     DMChannelOut,
     FriendshipOut,
@@ -38,8 +41,10 @@ from .schemas import (
     MessageUpdate,
     ReactionCreate,
     ReactionOut,
+    RoleUpdate,
     ServerCreate,
     ServerOut,
+    ServerUpdate,
     Token,
     UserCreate,
     UserLogin,
@@ -581,6 +586,75 @@ def create_server(
     return server
 
 
+@app.put("/servers/{server_id}", response_model=ServerOut)
+def update_server(
+    server_id: str,
+    payload: ServerUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ServerOut:
+    require_membership(db, current_user.id, server_id)
+    membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    if membership.role not in ("owner", "admin"):
+        raise HTTPException(status_code=403, detail="Only owners and admins can rename servers")
+
+    server = db.get(Server, server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    server.name = payload.name
+    db.commit()
+    db.refresh(server)
+    return server
+
+
+@app.delete("/servers/{server_id}", status_code=204)
+def delete_server(
+    server_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    require_membership(db, current_user.id, server_id)
+    membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    if membership.role != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can delete a server")
+
+    server = db.get(Server, server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    db.delete(server)
+    db.commit()
+
+
+@app.post("/servers/{server_id}/leave", status_code=204)
+def leave_server(
+    server_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    if not membership:
+        raise HTTPException(status_code=404, detail="Not a member")
+    if membership.role == "owner":
+        raise HTTPException(status_code=400, detail="Owner cannot leave. Transfer ownership or delete the server.")
+    db.delete(membership)
+    db.commit()
+
+
 def require_membership(db: Session, user_id: str, server_id: str) -> None:
     membership = db.scalar(
         select(ServerMembership).where(
@@ -674,6 +748,84 @@ def create_channel(
     return channel
 
 
+@app.put("/servers/{server_id}/channels/{channel_id}", response_model=ChannelOut)
+def update_channel(
+    server_id: str,
+    channel_id: str,
+    payload: ChannelUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ChannelOut:
+    require_membership(db, current_user.id, server_id)
+    channel = db.get(Channel, channel_id)
+    if not channel or channel.server_id != server_id:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel.name = payload.name
+    db.commit()
+    db.refresh(channel)
+    return channel
+
+
+@app.delete("/servers/{server_id}/channels/{channel_id}", status_code=204)
+def delete_channel(
+    server_id: str,
+    channel_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    require_membership(db, current_user.id, server_id)
+    membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    if membership.role not in ("owner", "admin"):
+        raise HTTPException(status_code=403, detail="Only owners and admins can delete channels")
+    channel = db.get(Channel, channel_id)
+    if not channel or channel.server_id != server_id:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    db.delete(channel)
+    db.commit()
+
+
+@app.get("/servers/{server_id}/categories", response_model=list[CategoryOut])
+def list_categories(
+    server_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[CategoryOut]:
+    require_membership(db, current_user.id, server_id)
+    return db.scalars(
+        select(ChannelCategory)
+        .where(ChannelCategory.server_id == server_id)
+        .order_by(ChannelCategory.position)
+    ).all()
+
+
+@app.post("/servers/{server_id}/categories", response_model=CategoryOut)
+def create_category(
+    server_id: str,
+    payload: CategoryCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> CategoryOut:
+    require_membership(db, current_user.id, server_id)
+    max_pos = db.scalar(
+        select(func.max(ChannelCategory.position))
+        .where(ChannelCategory.server_id == server_id)
+    ) or 0
+    category = ChannelCategory(
+        server_id=server_id,
+        name=payload.name,
+        position=max_pos + 1,
+    )
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+    return category
+
+
 @app.get("/servers/{server_id}/members", response_model=list[MemberOut])
 def list_members(
     server_id: str,
@@ -690,6 +842,84 @@ def list_members(
         MemberOut(id=row.id, username=row.username, role=row.role)
         for row in rows
     ]
+
+
+@app.put("/servers/{server_id}/members/{member_id}/role", response_model=MemberOut)
+def update_member_role(
+    server_id: str,
+    member_id: str,
+    payload: RoleUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MemberOut:
+    require_membership(db, current_user.id, server_id)
+
+    # Check requester's role
+    requester_membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    if requester_membership.role not in ("owner", "admin"):
+        raise HTTPException(status_code=403, detail="Only owners and admins can change roles")
+
+    if payload.role == "owner" and requester_membership.role != "owner":
+        raise HTTPException(status_code=403, detail="Only owners can assign owner role")
+
+    # Find target membership
+    target_membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == member_id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    if not target_membership:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    if target_membership.role == "owner" and requester_membership.role != "owner":
+        raise HTTPException(status_code=403, detail="Cannot change owner's role")
+
+    target_membership.role = payload.role
+    db.commit()
+
+    target_user = db.get(User, member_id)
+    return MemberOut(id=target_user.id, username=target_user.username, role=payload.role)
+
+
+@app.delete("/servers/{server_id}/members/{member_id}", status_code=204)
+def kick_member(
+    server_id: str,
+    member_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    require_membership(db, current_user.id, server_id)
+
+    requester_membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    ROLE_RANK = {"owner": 4, "admin": 3, "moderator": 2, "member": 1}
+    if ROLE_RANK.get(requester_membership.role, 0) < 2:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    target_membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == member_id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    if not target_membership:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    if ROLE_RANK.get(target_membership.role, 0) >= ROLE_RANK.get(requester_membership.role, 0):
+        raise HTTPException(status_code=403, detail="Cannot kick someone with equal or higher role")
+
+    db.delete(target_membership)
+    db.commit()
 
 
 @app.get("/channels/{channel_id}/messages", response_model=list[MessageOut])
