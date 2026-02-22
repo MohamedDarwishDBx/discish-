@@ -1073,8 +1073,17 @@ def list_messages(
 
     result = []
     for msg in messages:
-        out = MessageOut.model_validate(msg).model_copy()
-        out.reactions = _aggregate_reactions(msg, db)
+        out = MessageOut(
+            id=msg.id,
+            channel_id=msg.channel_id,
+            author_id=msg.author_id,
+            content=msg.content or "",
+            attachment_url=msg.attachment_url,
+            attachment_name=msg.attachment_name,
+            created_at=msg.created_at,
+            edited_at=msg.edited_at,
+            reactions=_aggregate_reactions(msg, db),
+        )
         result.append(out)
     return result
 
