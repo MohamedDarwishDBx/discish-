@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -43,7 +44,7 @@ class ServerOut(BaseModel):
 
 class ChannelCreate(BaseModel):
     name: str = Field(min_length=2, max_length=80)
-    type: str = "text"
+    type: Literal["text", "voice"] = "text"
 
 
 class ChannelOut(BaseModel):

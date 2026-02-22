@@ -441,15 +441,10 @@ def create_message(
         "username": current_user.username,
     }
 
-    # Broadcast asynchronously
+    import asyncio
     try:
-        import asyncio
-
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.create_task(manager.broadcast(channel_id, payload_out))
-        else:
-            loop.run_until_complete(manager.broadcast(channel_id, payload_out))
+        loop = asyncio.get_running_loop()
+        loop.create_task(manager.broadcast(channel_id, payload_out))
     except RuntimeError:
         pass
 
