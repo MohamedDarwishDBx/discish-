@@ -10,7 +10,7 @@ export default function LandingPage({ onOpenApp }) {
       </div>
 
       <nav className="landing-nav">
-        <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish</div>
+        <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish — Discord El Ghalaba 🇪🇬</div>
         <div className="landing-links">
           <a href="#features">Features</a>
           <a href="#safety">Safety</a>
@@ -24,9 +24,8 @@ export default function LandingPage({ onOpenApp }) {
       <section className="landing-hero">
         <div className="hero-content">
         <h1 className="landing-headline">
-          Discish —<br />
-          Discord El<br />
-          Ghalaba 🇪🇬
+          The People&apos;s<br />
+          Discord
         </h1>
         <p className="landing-subtitle">
           Discish is great for playing games and chilling with friends, or even
@@ -142,7 +141,7 @@ export default function LandingPage({ onOpenApp }) {
       </section>
 
       <footer className="landing-footer">
-        <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish</div>
+        <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish — Discord El Ghalaba 🇪🇬</div>
         <p>A Discord-inspired chat platform. Built for fun.</p>
       </footer>
     </div>
