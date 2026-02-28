@@ -28,6 +28,9 @@ body {
   background: var(--bg);
   color: var(--text-normal);
   min-height: 100vh;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 label {
@@ -764,6 +767,8 @@ input {
   z-index: 10;
   height: 100vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .sidebar-header {
@@ -930,12 +935,13 @@ input {
   grid-template-columns: 18px 1fr auto;
   gap: 8px;
   align-items: center;
-  padding: 6px 10px;
+  padding: 8px 10px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
   text-align: left;
   position: relative;
+  min-height: 36px;
 }
 
 .channel:hover {
@@ -1737,6 +1743,8 @@ input {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-width: 36px;
+  min-height: 36px;
 }
 
 .icon-btn svg {
@@ -1845,6 +1853,8 @@ input {
   gap: 6px;
   padding: 16px 18px 10px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .date-divider {
@@ -2381,6 +2391,8 @@ input {
   flex-direction: column;
   gap: 20px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .voice-header-card {
@@ -3085,6 +3097,7 @@ input {
   color: var(--text-normal);
 }
 
+/* ── Tablet: hide member rail ── */
 @media (max-width: 1200px) {
   .app-shell {
     grid-template-columns: var(--rail) 260px 1fr;
@@ -3095,6 +3108,7 @@ input {
   }
 }
 
+/* ── Small tablet / large phone: sidebar overlay ── */
 @media (max-width: 980px) {
   :root {
     --rail: 64px;
@@ -3122,42 +3136,216 @@ input {
   .mobile-only {
     display: inline-flex;
   }
+
+  .voice-header-card {
+    padding: 14px;
+  }
 }
 
+/* ── Phone ── */
 @media (max-width: 720px) {
+  :root {
+    --rail: 56px;
+  }
+
   .main-header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .main-header .channel-title h3 {
+    font-size: 15px;
+  }
+
+  .main-header .channel-title .muted {
+    font-size: 11px;
   }
 
   .main-actions {
-    width: 100%;
-    justify-content: flex-start;
+    margin-left: auto;
+  }
+
+  .messages {
+    padding: 10px 12px 6px;
+    gap: 4px;
+  }
+
+  .message-row {
+    padding: 6px 0;
+    gap: 8px;
+  }
+
+  .message-row .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .message-content {
+    font-size: 14px;
   }
 
   .composer {
-    grid-template-columns: 1fr;
+    margin: 0 10px 10px;
+    padding: 6px 8px;
+    grid-template-columns: auto 1fr auto;
+    gap: 6px;
   }
 
-  .composer button {
-    width: 100%;
+  .composer input,
+  .composer textarea {
+    font-size: 16px;
   }
 
   .screen-share-grid:has(> :nth-child(2)) {
     grid-template-columns: 1fr;
   }
 
+  .voice-stage {
+    padding: 12px 10px;
+    gap: 14px;
+  }
+
   .voice-controls {
     flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .voice-ctrl-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .voice-join-btn {
+    min-height: 44px;
+    padding: 10px 20px;
   }
 
   .voice-participants-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+
+  .voice-participant-card {
+    min-height: 100px;
   }
 
   .pip-overlay {
-    width: 200px;
-    bottom: 12px;
-    right: 12px;
+    width: 160px;
+    bottom: 10px;
+    right: 10px;
+  }
+
+  .server-rail {
+    padding: 8px 4px;
+    gap: 8px;
+  }
+
+  .server-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .sidebar {
+    left: var(--rail);
+    width: calc(100vw - var(--rail));
+  }
+
+  .profile-card {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .profile-card .avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .voice-status-bar {
+    padding: 8px;
+  }
+
+  .modal-content {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 48px);
+  }
+
+  .settings-panel {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 32px);
+  }
+
+  .fullscreen-btn {
+    opacity: 1;
+  }
+
+  .emoji-picker {
+    width: calc(100vw - 24px);
+    max-width: 320px;
+  }
+
+  .user-profile-popup {
+    width: calc(100vw - 24px);
+    max-width: 380px;
+  }
+}
+
+/* ── Very small phone ── */
+@media (max-width: 480px) {
+  :root {
+    --rail: 48px;
+  }
+
+  .server-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
+  }
+
+  .landing-headline {
+    font-size: 28px;
+  }
+
+  .landing-subtitle {
+    font-size: 14px;
+  }
+
+  .feature-card {
+    padding: 20px;
+  }
+
+  .feature-card h3 {
+    font-size: 16px;
+  }
+
+  .feature-card p {
+    font-size: 13px;
+  }
+
+  .voice-participants-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Touch & safe area support ── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .composer {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .profile-card {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .server-rail {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .landing-footer {
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
   }
 }

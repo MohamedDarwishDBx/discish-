@@ -72,7 +72,7 @@ export default function App() {
   const [channelModalType, setChannelModalType] = useState("text");
   const [modalLoading, setModalLoading] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
-  const [memberRailOpen, setMemberRailOpen] = useState(true);
+  const [memberRailOpen, setMemberRailOpen] = useState(() => window.innerWidth > 1200);
   const [typingUsers, setTypingUsers] = useState([]);
   const [dmChannels, setDmChannels] = useState([]);
   const [activeDM, setActiveDM] = useState(null);
