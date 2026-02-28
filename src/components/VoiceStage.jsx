@@ -169,6 +169,7 @@ export default function VoiceStage({
 
 function ScreenShareTile({ share }) {
   const videoRef = useRef(null);
+  const tileRef = useRef(null);
 
   useEffect(() => {
     const container = videoRef.current;
@@ -179,19 +180,30 @@ function ScreenShareTile({ share }) {
     return () => { container.innerHTML = ""; };
   }, [share.element]);
 
+  const goFullscreen = () => {
+    const el = tileRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen().catch(() => {});
+  };
+
   return (
-    <div className="screen-share-tile">
+    <div className="screen-share-tile" ref={tileRef} onDoubleClick={goFullscreen}>
       <div className="screen-share-video-container" ref={videoRef} />
       <div className="screen-share-label">
         <span className="live-badge">LIVE</span>
         {share.participantName}&apos;s screen
       </div>
+      <button type="button" className="fullscreen-btn" onClick={goFullscreen} title="Fullscreen">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 14H5v5h5v-2H7v-3Zm-2-4h2V7h3V5H5v5Zm12 7h-3v2h5v-5h-2v3ZM14 5v2h3v3h2V5h-5Z" fill="currentColor" /></svg>
+      </button>
     </div>
   );
 }
 
 function ParticipantCard({ participant, videoFeed }) {
   const videoRef = useRef(null);
+  const cardRef = useRef(null);
   const hasVideo = !!videoFeed;
 
   useEffect(() => {
@@ -203,10 +215,21 @@ function ParticipantCard({ participant, videoFeed }) {
     return () => { container.innerHTML = ""; };
   }, [videoFeed?.element]);
 
+  const goFullscreen = () => {
+    const el = cardRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen().catch(() => {});
+  };
+
   return (
-    <div className={`voice-participant-card ${participant.speaking ? "speaking" : ""} ${hasVideo ? "has-video" : ""} ${participant.isScreenSharing ? "is-streaming" : ""}`}>
+    <div ref={cardRef} className={`voice-participant-card ${participant.speaking ? "speaking" : ""} ${hasVideo ? "has-video" : ""} ${participant.isScreenSharing ? "is-streaming" : ""}`}>
       {hasVideo ? (
-        <div className="video-tile" ref={videoRef} />
+        <div className="video-tile" ref={videoRef} onDoubleClick={goFullscreen}>
+          <button type="button" className="fullscreen-btn" onClick={goFullscreen} title="Fullscreen">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M7 14H5v5h5v-2H7v-3Zm-2-4h2V7h3V5H5v5Zm12 7h-3v2h5v-5h-2v3ZM14 5v2h3v3h2V5h-5Z" fill="currentColor" /></svg>
+          </button>
+        </div>
       ) : (
         <div className={`voice-avatar-ring ${participant.speaking ? "ring-active" : ""}`}>
           <span

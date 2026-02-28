@@ -260,6 +260,14 @@ export default function App() {
           if (pub.track) setLocalScreenTrack(pub.track);
         } else if (pub.source === Track.Source.Camera) {
           setIsCameraOn(true);
+          if (pub.track) {
+            const el = pub.track.attach();
+            el.autoplay = true;
+            el.playsInline = true;
+            el.muted = true;
+            const entry = { participantId: room.localParticipant.identity, participantName: room.localParticipant.name || room.localParticipant.identity, track: pub.track, element: el };
+            setVideoFeeds((prev) => [...prev.filter((v) => v.participantId !== entry.participantId), entry]);
+          }
         }
         updateMembers();
       });
@@ -270,6 +278,8 @@ export default function App() {
           setLocalScreenTrack(null);
         } else if (pub.source === Track.Source.Camera) {
           setIsCameraOn(false);
+          if (pub.track) pub.track.detach().forEach((e) => e.remove());
+          setVideoFeeds((prev) => prev.filter((v) => v.participantId !== room.localParticipant.identity));
         }
         updateMembers();
       });
@@ -312,6 +322,7 @@ export default function App() {
     if (!room) return;
     try {
       await room.localParticipant.setScreenShareEnabled(!isScreenSharing, {
+        audio: true,
         resolution: { width: 1920, height: 1080, frameRate: 30 },
         contentHint: "detail",
       });
