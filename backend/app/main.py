@@ -69,7 +69,15 @@ _main_loop: asyncio.AbstractEventLoop | None = None
 def _fire_and_forget(coro) -> None:
     """Schedule an async coroutine from a sync (threadpool) context."""
     if _main_loop and _main_loop.is_running():
-        asyncio.run_coroutine_threadsafe(coro, _main_loop)
+        future = asyncio.run_coroutine_threadsafe(coro, _main_loop)
+        future.add_done_callback(_log_broadcast_error)
+
+
+def _log_broadcast_error(future) -> None:
+    try:
+        future.result()
+    except Exception as exc:
+        print(f"[broadcast] Error: {exc}", flush=True)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DIST_DIR = PROJECT_ROOT / "dist"
 INDEX_FILE = DIST_DIR / "index.html"
@@ -1109,7 +1117,7 @@ def create_message(
     db.commit()
     db.refresh(message)
 
-    payload_out = MessageOut.model_validate(message).model_dump()
+    payload_out = MessageOut.model_validate(message).model_dump(mode="json")
     payload_out["event"] = "message.created"
     payload_out["author"] = {
         "id": current_user.id,
@@ -1185,7 +1193,7 @@ def create_message_with_attachment(
     db.commit()
     db.refresh(message)
 
-    payload_out = MessageOut.model_validate(message).model_dump()
+    payload_out = MessageOut.model_validate(message).model_dump(mode="json")
     payload_out["event"] = "message.created"
     payload_out["author"] = {"id": current_user.id, "username": current_user.username}
 
@@ -1218,7 +1226,7 @@ def update_message(
     db.commit()
     db.refresh(message)
 
-    payload_out = MessageOut.model_validate(message).model_dump()
+    payload_out = MessageOut.model_validate(message).model_dump(mode="json")
     payload_out["event"] = "message.updated"
     payload_out["author"] = {"id": current_user.id, "username": current_user.username}
 
