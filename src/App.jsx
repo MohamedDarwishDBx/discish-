@@ -726,12 +726,12 @@ export default function App() {
               <button type="button" className="icon-btn" onClick={() => setShowChannelModal(true)}><PlusIcon size={18} /></button>
             ) : null}
           </div>
-          <div className="ramadan-lantern">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <path d="M12 2L9 5v1H8a2 2 0 0 0-2 2v6a4 4 0 0 0 8 0V8a2 2 0 0 0-2-2h-1V5l-3-3zm-2 6h4v6a2 2 0 1 1-4 0V8z"/>
-            </svg>
-            Ramadan Kareem
-          </div>
+        </div>
+        <div className="ramadan-lantern">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <path d="M12 2L9 5v1H8a2 2 0 0 0-2 2v6a4 4 0 0 0 8 0V8a2 2 0 0 0-2-2h-1V5l-3-3zm-2 6h4v6a2 2 0 1 1-4 0V8z"/>
+          </svg>
+          Ramadan Kareem
         </div>
 
         {activeServerId ? (
