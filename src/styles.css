@@ -3936,8 +3936,8 @@ input {
   justify-content: center;
   gap: 12px;
   padding: 14px 28px;
-  background: linear-gradient(135deg, rgba(232, 168, 50, 0.12), rgba(196, 136, 32, 0.06));
-  border: 1px solid rgba(232, 168, 50, 0.2);
+  background: transparent;
+  border: none;
   border-radius: 12px;
   margin: 0 auto 24px;
   max-width: 480px;
@@ -3945,10 +3945,8 @@ input {
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  backdrop-filter: blur(8px);
   text-shadow: 0 0 14px rgba(232, 168, 50, 0.4);
   position: relative;
-  z-index: 2;
 }
 
 .ramadan-theme .ramadan-landing-banner .ramadan-star {

@@ -107,7 +107,7 @@ export default function App() {
 
   const destroyRamadanAudio = () => {
     if (ramadanAudioRef.current) {
-      try { document.body.removeChild(ramadanAudioRef.current); } catch {}
+      ramadanAudioRef.current.pause();
       ramadanAudioRef.current = null;
     }
   };
@@ -117,15 +117,12 @@ export default function App() {
       const next = !prev;
       if (next) {
         setShowRamadanPopup(true);
-        // Create iframe SYNCHRONOUSLY in click handler to preserve user gesture for autoplay
+        // Play local MP3 — new Audio().play() in click handler is always allowed
         destroyRamadanAudio();
-        const iframe = document.createElement("iframe");
-        iframe.src = "https://www.youtube.com/embed/A2b-CzPKtGw?autoplay=1&start=25&end=43&controls=0&showinfo=0&rel=0&modestbranding=1&mute=0";
-        iframe.allow = "autoplay; encrypted-media";
-        iframe.style.cssText = "position:fixed;bottom:0;right:0;width:300px;height:170px;border:none;opacity:0.01;pointer-events:none;z-index:-1;";
-        iframe.title = "Ramadan nasheed";
-        document.body.appendChild(iframe);
-        ramadanAudioRef.current = iframe;
+        const audio = new Audio("/nasheed.mp3");
+        audio.volume = 0.7;
+        audio.play().catch(() => {});
+        ramadanAudioRef.current = audio;
       }
       return next;
     });
