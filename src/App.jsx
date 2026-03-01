@@ -28,6 +28,7 @@ import FriendsList from "./components/FriendsList";
 import UserProfilePopup from "./components/UserProfilePopup";
 import ServerSettings from "./components/ServerSettings";
 import PipPreview from "./components/PipPreview";
+import RamadanPopup from "./components/RamadanPopup";
 import {
   ChevronDownIcon,
   InviteIcon,
@@ -93,6 +94,7 @@ export default function App() {
   const [localScreenTrack, setLocalScreenTrack] = useState(null);
   const audioElementsRef = useRef({});
   const [ramadanTheme, setRamadanTheme] = useState(() => localStorage.getItem("discish_theme") === "ramadan");
+  const [showRamadanPopup, setShowRamadanPopup] = useState(false);
 
   /* ── Ramadan theme ── */
 
@@ -101,7 +103,13 @@ export default function App() {
     localStorage.setItem("discish_theme", ramadanTheme ? "ramadan" : "default");
   }, [ramadanTheme]);
 
-  const toggleTheme = () => setRamadanTheme((prev) => !prev);
+  const toggleTheme = () => {
+    setRamadanTheme((prev) => {
+      const next = !prev;
+      if (next) setShowRamadanPopup(true);
+      return next;
+    });
+  };
 
   /* ── Auth ── */
 
@@ -688,7 +696,12 @@ export default function App() {
   /* ── Render ── */
 
   if (!token || !user) {
-    if (!showAuth) return <LandingPage onOpenApp={() => setShowAuth(true)} ramadanTheme={ramadanTheme} onToggleTheme={toggleTheme} />;
+    if (!showAuth) return (
+      <>
+        <LandingPage onOpenApp={() => setShowAuth(true)} ramadanTheme={ramadanTheme} onToggleTheme={toggleTheme} />
+        <RamadanPopup open={showRamadanPopup} onClose={() => setShowRamadanPopup(false)} />
+      </>
+    );
     return <AuthScreen onAuth={setAuthToken} onBack={() => setShowAuth(false)} />;
   }
 
@@ -727,13 +740,6 @@ export default function App() {
             ) : null}
           </div>
         </div>
-        <div className="ramadan-lantern">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-            <path d="M12 2L9 5v1H8a2 2 0 0 0-2 2v6a4 4 0 0 0 8 0V8a2 2 0 0 0-2-2h-1V5l-3-3zm-2 6h4v6a2 2 0 1 1-4 0V8z"/>
-          </svg>
-          Ramadan Kareem
-        </div>
-
         {activeServerId ? (
           <>
             <div className="sidebar-nav">
@@ -1014,6 +1020,7 @@ export default function App() {
       ) : null}
 
       <div ref={audioSinkRef} style={{ display: "none" }} />
+      <RamadanPopup open={showRamadanPopup} onClose={() => setShowRamadanPopup(false)} />
     </div>
   );
 }
