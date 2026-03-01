@@ -20,18 +20,20 @@ export default function LandingPage({ onOpenApp, ramadanTheme, onToggleTheme }) 
             </svg>
             {ramadanTheme ? "Default" : "Ramadan"}
           </button>
-          <PrayerCountdown compact />
+          {ramadanTheme && <PrayerCountdown compact />}
           <button type="button" className="landing-login-btn" onClick={onOpenApp}>
             Login
           </button>
         </div>
       </nav>
 
-      <div className="ramadan-landing-banner">
-        <span className="ramadan-star">&#x2728;</span>
-        Ramadan Kareem
-        <span className="ramadan-star">&#x2728;</span>
-      </div>
+      {ramadanTheme && (
+        <div className="ramadan-landing-banner">
+          <span className="ramadan-star">&#x2728;</span>
+          Ramadan Kareem
+          <span className="ramadan-star">&#x2728;</span>
+        </div>
+      )}
 
       <section className="landing-hero">
         <div className="hero-content">
