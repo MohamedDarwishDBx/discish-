@@ -96,6 +96,7 @@ export default function App() {
   const audioElementsRef = useRef({});
   const [ramadanTheme, setRamadanTheme] = useState(() => localStorage.getItem("discish_theme") === "ramadan");
   const [showRamadanPopup, setShowRamadanPopup] = useState(false);
+  const ramadanAudioRef = useRef(null);
 
   /* ── Ramadan theme ── */
 
@@ -104,10 +105,28 @@ export default function App() {
     localStorage.setItem("discish_theme", ramadanTheme ? "ramadan" : "default");
   }, [ramadanTheme]);
 
+  const destroyRamadanAudio = () => {
+    if (ramadanAudioRef.current) {
+      try { document.body.removeChild(ramadanAudioRef.current); } catch {}
+      ramadanAudioRef.current = null;
+    }
+  };
+
   const toggleTheme = () => {
     setRamadanTheme((prev) => {
       const next = !prev;
-      if (next) setShowRamadanPopup(true);
+      if (next) {
+        setShowRamadanPopup(true);
+        // Create iframe SYNCHRONOUSLY in click handler to preserve user gesture for autoplay
+        destroyRamadanAudio();
+        const iframe = document.createElement("iframe");
+        iframe.src = "https://www.youtube.com/embed/A2b-CzPKtGw?autoplay=1&start=25&end=43&controls=0&showinfo=0&rel=0&modestbranding=1&mute=0";
+        iframe.allow = "autoplay; encrypted-media";
+        iframe.style.cssText = "position:fixed;bottom:0;right:0;width:300px;height:170px;border:none;opacity:0.01;pointer-events:none;z-index:-1;";
+        iframe.title = "Ramadan nasheed";
+        document.body.appendChild(iframe);
+        ramadanAudioRef.current = iframe;
+      }
       return next;
     });
   };
@@ -700,7 +719,7 @@ export default function App() {
     if (!showAuth) return (
       <>
         <LandingPage onOpenApp={() => setShowAuth(true)} ramadanTheme={ramadanTheme} onToggleTheme={toggleTheme} />
-        <RamadanPopup open={showRamadanPopup} onClose={() => setShowRamadanPopup(false)} />
+        <RamadanPopup open={showRamadanPopup} onClose={() => { setShowRamadanPopup(false); destroyRamadanAudio(); }} />
       </>
     );
     return <AuthScreen onAuth={setAuthToken} onBack={() => setShowAuth(false)} />;
@@ -1023,7 +1042,7 @@ export default function App() {
       ) : null}
 
       <div ref={audioSinkRef} style={{ display: "none" }} />
-      <RamadanPopup open={showRamadanPopup} onClose={() => setShowRamadanPopup(false)} />
+      <RamadanPopup open={showRamadanPopup} onClose={() => { setShowRamadanPopup(false); destroyRamadanAudio(); }} />
     </div>
   );
 }

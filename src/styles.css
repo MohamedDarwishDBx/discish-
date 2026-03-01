@@ -3661,6 +3661,7 @@ input {
 /* ── Prayer Countdown ── */
 .prayer-countdown {
   position: relative;
+  z-index: 50;
 }
 
 .prayer-countdown-main {
