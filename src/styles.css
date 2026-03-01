@@ -3454,83 +3454,169 @@ input {
 
 /* ── Ramadan Theme ── */
 
+/* ═══════════════════════════════════════════════════════════
+   RAMADAN THEME — dark teal-green with gold accents
+   ═══════════════════════════════════════════════════════════ */
 .ramadan-theme {
-  --bg: #1e2d2f;
-  --bg-secondary: #192428;
-  --bg-tertiary: #0f1a1e;
-  --bg-floating: #0b1215;
-  --text-normal: #e8dcc8;
-  --text-muted: #7a8a7e;
-  --brand: #c9a84c;
+  --bg: #152020;
+  --bg-secondary: #111b1b;
+  --bg-tertiary: #0a1414;
+  --bg-floating: #071010;
+  --text-normal: #f0e6d2;
+  --text-muted: #8a9a8a;
+  --brand: #d4a43e;
   --danger: #c0392b;
   --success: #2d8659;
   --warning: #d4a847;
-  --border: #1a2a2e;
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --border: #1a2e28;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
-/* Active/selected items in Ramadan theme */
+/* — Active/selected items — */
 .ramadan-theme .channel-row.active,
 .ramadan-theme .nav-item.active {
-  background: #2a3f3a;
+  background: rgba(212, 164, 62, 0.12);
+  border-left: 3px solid #d4a43e;
 }
 
+.ramadan-theme .channel-row:hover {
+  background: rgba(212, 164, 62, 0.06);
+}
+
+/* — Buttons — */
 .ramadan-theme .chip.solid,
 .ramadan-theme .voice-join-btn {
-  background: #c9a84c;
-  color: #0f1a1e;
+  background: linear-gradient(135deg, #d4a43e, #b8882e);
+  color: #0a1414;
+  font-weight: 600;
 }
 
 .ramadan-theme .chip.solid:hover,
 .ramadan-theme .voice-join-btn:hover {
-  background: #d4b35a;
+  background: linear-gradient(135deg, #e0b44a, #c99838);
 }
 
-/* Gold-tinted scrollbar */
+/* — Gold-tinted scrollbar — */
 .ramadan-theme ::-webkit-scrollbar-thumb {
-  background: #3a4a3e;
+  background: #2a3d35;
 }
 
 .ramadan-theme ::-webkit-scrollbar-thumb:hover {
-  background: #c9a84c;
+  background: #d4a43e;
 }
 
-/* Selection highlight */
+/* — Selection highlight — */
 .ramadan-theme ::selection {
-  background: rgba(201, 168, 76, 0.3);
+  background: rgba(212, 164, 62, 0.35);
 }
 
-/* Gold accent on links */
+/* — Gold accent on links — */
 .ramadan-theme a {
-  color: #c9a84c;
+  color: #d4a43e;
 }
 
-/* Voice control buttons */
+/* — Voice control buttons — */
 .ramadan-theme .voice-ctrl-btn.sharing {
-  background: rgba(201, 168, 76, 0.2);
-  border-color: rgba(201, 168, 76, 0.4);
+  background: rgba(212, 164, 62, 0.2);
+  border-color: rgba(212, 164, 62, 0.4);
 }
 
-/* Sidebar header decoration when Ramadan theme is active */
+/* — Sidebar header — */
 .ramadan-theme .sidebar-header {
-  border-bottom-color: rgba(201, 168, 76, 0.2);
+  border-bottom: 1px solid rgba(212, 164, 62, 0.15);
 }
 
-/* Server rail accent */
+/* — Server rail — */
+.ramadan-theme .server-rail {
+  background: #0a1414;
+}
+
+.ramadan-theme .server-btn {
+  border: 1px solid rgba(212, 164, 62, 0.08);
+}
+
 .ramadan-theme .server-btn.active {
-  background: rgba(201, 168, 76, 0.15);
+  background: rgba(212, 164, 62, 0.18);
+  border-color: rgba(212, 164, 62, 0.3);
 }
 
 .ramadan-theme .server-btn.active::before {
-  background: #c9a84c;
+  background: #d4a43e;
 }
 
-/* Profile card border */
+/* — Profile card — */
 .ramadan-theme .profile-card {
-  border-top-color: rgba(201, 168, 76, 0.15);
+  border-top: 1px solid rgba(212, 164, 62, 0.12);
+  background: #0a1414;
 }
 
-/* Ramadan decorative elements */
+/* — Message area — */
+.ramadan-theme .msg-row:hover {
+  background: rgba(212, 164, 62, 0.04);
+}
+
+.ramadan-theme .msg-input-area {
+  background: #0a1414;
+  border-top-color: rgba(212, 164, 62, 0.08);
+}
+
+.ramadan-theme .msg-input-area input,
+.ramadan-theme .msg-input-area textarea {
+  background: #152020;
+  border-color: rgba(212, 164, 62, 0.15);
+}
+
+.ramadan-theme .msg-input-area input:focus,
+.ramadan-theme .msg-input-area textarea:focus {
+  border-color: rgba(212, 164, 62, 0.4);
+}
+
+/* — Header bar — */
+.ramadan-theme .channel-header {
+  border-bottom-color: rgba(212, 164, 62, 0.1);
+}
+
+/* — Category headers — gold sparkle effect — */
+.ramadan-theme .channel-category-name {
+  color: #d4a43e;
+  letter-spacing: 0.05em;
+}
+
+/* — Member rail — */
+.ramadan-theme .member-rail {
+  background: #111b1b;
+  border-left-color: rgba(212, 164, 62, 0.08);
+}
+
+/* — Modals — */
+.ramadan-theme .modal-inner {
+  border: 1px solid rgba(212, 164, 62, 0.15);
+}
+
+/* — Input fields — */
+.ramadan-theme .profile-edit-input,
+.ramadan-theme .role-select {
+  background: #152020;
+  border-color: rgba(212, 164, 62, 0.15);
+}
+
+.ramadan-theme .profile-edit-input:focus {
+  border-color: rgba(212, 164, 62, 0.4);
+  box-shadow: 0 0 0 2px rgba(212, 164, 62, 0.1);
+}
+
+/* — Send button — */
+.ramadan-theme .send-btn {
+  background: linear-gradient(135deg, #d4a43e, #b8882e);
+  color: #0a1414;
+}
+
+/* — Avatar ring in Ramadan — */
+.ramadan-theme .avatar {
+  box-shadow: 0 0 0 2px rgba(212, 164, 62, 0.15);
+}
+
+/* ── Ramadan decorative elements ── */
 .ramadan-lantern {
   display: none;
 }
@@ -3538,29 +3624,208 @@ input {
 .ramadan-theme .ramadan-lantern {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #c9a84c;
+  gap: 8px;
+  color: #d4a43e;
   font-size: 13px;
-  padding: 4px 0;
-  opacity: 0.8;
+  font-weight: 600;
+  padding: 8px 12px;
+  margin: 0 8px 4px;
+  border-radius: 8px;
+  background: rgba(212, 164, 62, 0.08);
+  border: 1px solid rgba(212, 164, 62, 0.12);
 }
 
 .ramadan-theme .ramadan-lantern svg {
-  filter: drop-shadow(0 0 4px rgba(201, 168, 76, 0.4));
+  filter: drop-shadow(0 0 6px rgba(212, 164, 62, 0.5));
 }
 
-/* Theme toggle button */
+/* ── Ramadan landing page ── */
+.ramadan-theme .landing {
+  background: linear-gradient(165deg, #0f2420 0%, #0a1a16 35%, #071210 70%, #050e0c 100%);
+}
+
+.ramadan-theme .landing .blob-1 {
+  background: radial-gradient(circle, #d4a43e 0%, transparent 70%);
+  opacity: 0.15;
+}
+
+.ramadan-theme .landing .blob-2 {
+  background: radial-gradient(circle, #2d8659 0%, transparent 70%);
+  opacity: 0.2;
+}
+
+.ramadan-theme .landing .blob-3 {
+  background: radial-gradient(circle, #b8882e 0%, transparent 70%);
+  opacity: 0.15;
+}
+
+.ramadan-theme .landing .blob-4 {
+  background: radial-gradient(circle, #d4a43e 0%, transparent 70%);
+  opacity: 0.1;
+}
+
+.ramadan-theme .landing .blob-5 {
+  background: radial-gradient(circle, #2d8659 0%, transparent 70%);
+  opacity: 0.12;
+}
+
+.ramadan-theme .landing-login-btn {
+  background: rgba(212, 164, 62, 0.15);
+  border: 1px solid rgba(212, 164, 62, 0.3);
+  color: #d4a43e;
+}
+
+.ramadan-theme .landing-login-btn:hover {
+  background: rgba(212, 164, 62, 0.25);
+}
+
+.ramadan-theme .landing-btn.primary {
+  background: linear-gradient(135deg, #d4a43e, #b8882e);
+  color: #0a1414;
+}
+
+.ramadan-theme .landing-btn.primary:hover {
+  background: linear-gradient(135deg, #e0b44a, #c99838);
+}
+
+.ramadan-theme .feature-card {
+  background: rgba(212, 164, 62, 0.05);
+  border-color: rgba(212, 164, 62, 0.12);
+}
+
+.ramadan-theme .feature-card:hover {
+  border-color: rgba(212, 164, 62, 0.25);
+  background: rgba(212, 164, 62, 0.08);
+}
+
+.ramadan-theme .feature-icon {
+  background: rgba(212, 164, 62, 0.12);
+  color: #d4a43e;
+}
+
+.ramadan-theme .feature-icon svg {
+  fill: #d4a43e;
+}
+
+.ramadan-theme .section-heading {
+  color: #d4a43e;
+}
+
+.ramadan-theme .landing-footer {
+  border-top-color: rgba(212, 164, 62, 0.15);
+}
+
+.ramadan-theme .hero-logo-card {
+  border-color: rgba(212, 164, 62, 0.2);
+  box-shadow: 0 0 40px rgba(212, 164, 62, 0.1);
+}
+
+/* ── Ramadan Kareem banner on landing ── */
+.ramadan-landing-banner {
+  display: none;
+}
+
+.ramadan-theme .ramadan-landing-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: rgba(212, 164, 62, 0.1);
+  border: 1px solid rgba(212, 164, 62, 0.2);
+  border-radius: 12px;
+  margin: 0 auto 24px;
+  max-width: 480px;
+  color: #d4a43e;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(8px);
+}
+
+.ramadan-theme .ramadan-landing-banner .ramadan-star {
+  font-size: 22px;
+  animation: ramadan-twinkle 2s ease-in-out infinite alternate;
+}
+
+@keyframes ramadan-twinkle {
+  0% { opacity: 0.6; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ── Auth screen in Ramadan ── */
+.ramadan-theme .auth-container {
+  background: #0a1414;
+  border: 1px solid rgba(212, 164, 62, 0.15);
+}
+
+.ramadan-theme .auth-container h2 {
+  color: #d4a43e;
+}
+
+.ramadan-theme .auth-container input {
+  background: #152020;
+  border-color: rgba(212, 164, 62, 0.15);
+}
+
+.ramadan-theme .auth-container input:focus {
+  border-color: rgba(212, 164, 62, 0.4);
+}
+
+.ramadan-theme .auth-container .chip.solid {
+  background: linear-gradient(135deg, #d4a43e, #b8882e);
+  color: #0a1414;
+}
+
+/* ── Theme toggle button ── */
 .theme-toggle {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 18px;
-  padding: 4px;
+  font-size: 16px;
+  padding: 4px 8px;
   border-radius: 6px;
   transition: background 0.15s;
   line-height: 1;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .theme-toggle:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.ramadan-theme .theme-toggle {
+  color: #d4a43e;
+}
+
+/* ── Landing page theme toggle ── */
+.landing-theme-toggle {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.landing-theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ramadan-theme .landing-theme-toggle {
+  background: rgba(212, 164, 62, 0.15);
+  border-color: rgba(212, 164, 62, 0.3);
+  color: #d4a43e;
+}
+
+.ramadan-theme .landing-theme-toggle:hover {
+  background: rgba(212, 164, 62, 0.25);
 }

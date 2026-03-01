@@ -1,4 +1,4 @@
-export default function LandingPage({ onOpenApp }) {
+export default function LandingPage({ onOpenApp, ramadanTheme, onToggleTheme }) {
   return (
     <div className="landing">
       <div className="landing-blobs">
@@ -11,11 +11,24 @@ export default function LandingPage({ onOpenApp }) {
 
       <nav className="landing-nav">
         <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish — Discord El Ghalaba 🇪🇬</div>
-        <div className="landing-links" />
+        <div className="landing-links">
+          <button type="button" className="landing-theme-toggle" onClick={onToggleTheme}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+            {ramadanTheme ? "Default" : "Ramadan"}
+          </button>
+        </div>
         <button type="button" className="landing-login-btn" onClick={onOpenApp}>
           Login
         </button>
       </nav>
+
+      <div className="ramadan-landing-banner">
+        <span className="ramadan-star">&#x2728;</span>
+        Ramadan Kareem
+        <span className="ramadan-star">&#x2728;</span>
+      </div>
 
       <section className="landing-hero">
         <div className="hero-content">

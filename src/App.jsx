@@ -688,7 +688,7 @@ export default function App() {
   /* ── Render ── */
 
   if (!token || !user) {
-    if (!showAuth) return <LandingPage onOpenApp={() => setShowAuth(true)} />;
+    if (!showAuth) return <LandingPage onOpenApp={() => setShowAuth(true)} ramadanTheme={ramadanTheme} onToggleTheme={toggleTheme} />;
     return <AuthScreen onAuth={setAuthToken} onBack={() => setShowAuth(false)} />;
   }
 
