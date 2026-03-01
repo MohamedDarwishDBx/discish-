@@ -1,3 +1,5 @@
+import PrayerCountdown from "./PrayerCountdown";
+
 export default function LandingPage({ onOpenApp, ramadanTheme, onToggleTheme }) {
   return (
     <div className="landing">
@@ -12,6 +14,7 @@ export default function LandingPage({ onOpenApp, ramadanTheme, onToggleTheme }) 
       <nav className="landing-nav">
         <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish — Discord El Ghalaba 🇪🇬</div>
         <div className="landing-links">
+          <PrayerCountdown compact />
           <button type="button" className="landing-theme-toggle" onClick={onToggleTheme}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />

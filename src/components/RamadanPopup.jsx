@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const CONFETTI_COUNT = 80;
 const CONFETTI_COLORS = ["#e8a832", "#d44a3a", "#4caf50", "#3a8fd4", "#f5b742", "#ff6b9d", "#a855f7"];
@@ -9,11 +9,10 @@ function randomBetween(a, b) {
 
 export default function RamadanPopup({ open, onClose }) {
   const [confetti, setConfetti] = useState([]);
-  const [showIframe, setShowIframe] = useState(false);
+  const iframeRef = useRef(null);
 
   useEffect(() => {
-    if (!open) { setShowIframe(false); return; }
-    // Generate confetti pieces
+    if (!open) return;
     const pieces = Array.from({ length: CONFETTI_COUNT }, (_, i) => ({
       id: i,
       left: randomBetween(0, 100),
@@ -25,11 +24,31 @@ export default function RamadanPopup({ open, onClose }) {
       type: Math.random() > 0.5 ? "circle" : "rect",
     }));
     setConfetti(pieces);
-    setShowIframe(true);
+  }, [open]);
+
+  // Create YouTube iframe imperatively to preserve user gesture context for autoplay
+  useEffect(() => {
+    if (!open) return;
+    const iframe = document.createElement("iframe");
+    iframe.src = "https://www.youtube.com/embed/A2b-CzPKtGw?autoplay=1&start=25&end=43&controls=0&showinfo=0&rel=0&modestbranding=1";
+    iframe.allow = "autoplay; encrypted-media";
+    iframe.style.cssText = "position:fixed;bottom:0;right:0;width:300px;height:170px;border:none;opacity:0.01;pointer-events:none;z-index:99998;";
+    iframe.title = "Ramadan nasheed";
+    document.body.appendChild(iframe);
+    iframeRef.current = iframe;
+    return () => {
+      if (iframeRef.current) {
+        document.body.removeChild(iframeRef.current);
+        iframeRef.current = null;
+      }
+    };
   }, [open]);
 
   const handleClose = () => {
-    setShowIframe(false);
+    if (iframeRef.current) {
+      document.body.removeChild(iframeRef.current);
+      iframeRef.current = null;
+    }
     onClose();
   };
 
@@ -83,16 +102,6 @@ export default function RamadanPopup({ open, onClose }) {
           Allah Akram
         </button>
       </div>
-
-      {/* Hidden YouTube embed — autoplay with allow attribute bypasses browser restrictions */}
-      {showIframe && (
-        <iframe
-          src="https://www.youtube.com/embed/A2b-CzPKtGw?autoplay=1&start=25&end=43&controls=0&showinfo=0&rel=0"
-          allow="autoplay; encrypted-media"
-          style={{ position: "absolute", width: 1, height: 1, top: -9999, left: -9999, border: "none", opacity: 0 }}
-          title="Ramadan nasheed"
-        />
-      )}
     </div>
   );
 }

@@ -3658,6 +3658,186 @@ input {
 
 /* (lantern bar & light strips removed — popup replaces them) */
 
+/* ── Prayer Countdown ── */
+.prayer-countdown {
+  position: relative;
+}
+
+.prayer-countdown-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  transition: all 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.prayer-countdown-main:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.prayer-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.prayer-countdown-text {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.prayer-label {
+  opacity: 0.8;
+  font-size: 12px;
+}
+
+.prayer-time {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+}
+
+.prayer-chevron {
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+.prayer-schedule {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-floating, #111214);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 18px;
+  min-width: 200px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: prayer-dropdown 0.15s ease;
+}
+
+@keyframes prayer-dropdown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.prayer-schedule-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #b5bac1);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.prayer-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 13px;
+  color: var(--text-normal, #f2f3f5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.prayer-row:last-of-type {
+  border-bottom: none;
+}
+
+.prayer-row.highlight {
+  color: #e8a832;
+  font-weight: 600;
+}
+
+.prayer-row span:last-child {
+  font-family: "JetBrains Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ramadan theme prayer countdown */
+.ramadan-theme .prayer-countdown-main {
+  background: rgba(232, 168, 50, 0.12);
+  border-color: rgba(232, 168, 50, 0.25);
+  color: #e8a832;
+}
+
+.ramadan-theme .prayer-countdown-main:hover {
+  background: rgba(232, 168, 50, 0.2);
+}
+
+.ramadan-theme .prayer-schedule {
+  background: #16100a;
+  border-color: rgba(232, 168, 50, 0.15);
+}
+
+.ramadan-theme .prayer-row.highlight {
+  color: #f0b840;
+}
+
+/* Compact variant (landing page nav) */
+.prayer-countdown.compact .prayer-countdown-main {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.prayer-countdown.compact .prayer-time {
+  font-size: 12px;
+}
+
+/* Sidebar prayer countdown (in-app) */
+.sidebar .prayer-countdown {
+  margin: 4px 8px;
+}
+
+.sidebar .prayer-countdown-main {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text-normal);
+}
+
+.sidebar .prayer-countdown-main:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ramadan-theme .sidebar .prayer-countdown-main {
+  background: rgba(232, 168, 50, 0.08);
+  border-color: rgba(232, 168, 50, 0.12);
+  color: #e8a832;
+}
+
+.ramadan-theme .sidebar .prayer-countdown-main:hover {
+  background: rgba(232, 168, 50, 0.14);
+}
+
+.sidebar .prayer-schedule {
+  left: 10px;
+  right: 10px;
+  transform: none;
+  bottom: calc(100% + 6px);
+  top: auto;
+}
+
+@keyframes prayer-dropdown-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sidebar .prayer-schedule {
+  animation: prayer-dropdown-up 0.15s ease;
+}
+
 /* ── Ramadan landing page — warm dark tones ── */
 .ramadan-theme .landing {
   background: linear-gradient(165deg, #1c1408 0%, #120c04 35%, #0b0804 70%, #060402 100%);

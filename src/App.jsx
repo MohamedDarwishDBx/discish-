@@ -29,6 +29,7 @@ import UserProfilePopup from "./components/UserProfilePopup";
 import ServerSettings from "./components/ServerSettings";
 import PipPreview from "./components/PipPreview";
 import RamadanPopup from "./components/RamadanPopup";
+import PrayerCountdown from "./components/PrayerCountdown";
 import {
   ChevronDownIcon,
   InviteIcon,
@@ -795,6 +796,8 @@ export default function App() {
             onDisconnect={disconnectVoice}
           />
         ) : null}
+
+        {ramadanTheme && <PrayerCountdown />}
 
         <ProfileCard
           user={user}
