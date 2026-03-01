@@ -180,3 +180,20 @@ class VoiceTokenOut(BaseModel):
     room: str
     identity: str
     name: str
+
+
+class TimeoutCreate(BaseModel):
+    user_id: str
+    duration_minutes: int  # 5, 15, 60, 1440
+    reason: str | None = None
+
+
+class TimeoutOut(BaseModel):
+    id: str
+    server_id: str
+    user_id: str
+    username: str
+    timed_out_by: str
+    reason: str | None
+    expires_at: str
+    created_at: str

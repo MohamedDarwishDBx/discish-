@@ -9,6 +9,8 @@ export default function ProfileCard({
   onToggleMute,
   onToggleDeafen,
   onClickProfile,
+  ramadanTheme,
+  onToggleTheme,
 }) {
   return (
     <div className="profile-card">
@@ -45,6 +47,14 @@ export default function ProfileCard({
           title={voiceDeafened ? "Undeafen" : "Deafen"}
         >
           {voiceDeafened ? <DeafenIcon size={18} /> : <HeadphonesIcon size={18} />}
+        </button>
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={onToggleTheme}
+          title={ramadanTheme ? "Default Theme" : "Ramadan Theme"}
+        >
+          {ramadanTheme ? "\u{1F319}" : "\u2600\uFE0F"}
         </button>
       </div>
     </div>

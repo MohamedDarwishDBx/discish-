@@ -2608,24 +2608,96 @@ input {
   position: absolute;
   top: 8px;
   right: 8px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
   border: none;
   color: #fff;
   cursor: pointer;
   border-radius: 6px;
   padding: 6px;
-  opacity: 0;
-  transition: opacity 0.15s;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
   z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.screen-share-tile:hover .fullscreen-btn,
-.video-tile:hover .fullscreen-btn,
-.fullscreen-btn:focus-visible {
+.fullscreen-btn:hover {
   opacity: 1;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* ── Volume slider in screen share tile ── */
+
+.volume-slider-container {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  padding: 5px 10px;
+  border-radius: 6px;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.screen-share-tile:hover .volume-slider-container,
+.screen-share-tile:fullscreen .volume-slider-container {
+  opacity: 1;
+}
+
+.volume-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f0b132;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.1s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f0b132;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.volume-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
 }
 
 .screen-share-tile:fullscreen,
@@ -2694,6 +2766,36 @@ input {
   letter-spacing: 0.5px;
   z-index: 2;
   animation: live-pulse 2s ease-in-out infinite;
+}
+
+/* ── Voice kick button ── */
+
+.voice-kick-btn {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+.voice-participant-card:hover .voice-kick-btn {
+  opacity: 1;
+}
+
+.voice-kick-btn:hover {
+  background: var(--danger);
+  color: #fff;
 }
 
 /* ── Video tile (camera on) ── */
@@ -3348,4 +3450,117 @@ input {
   .landing-footer {
     padding-bottom: calc(32px + env(safe-area-inset-bottom));
   }
+}
+
+/* ── Ramadan Theme ── */
+
+.ramadan-theme {
+  --bg: #1e2d2f;
+  --bg-secondary: #192428;
+  --bg-tertiary: #0f1a1e;
+  --bg-floating: #0b1215;
+  --text-normal: #e8dcc8;
+  --text-muted: #7a8a7e;
+  --brand: #c9a84c;
+  --danger: #c0392b;
+  --success: #2d8659;
+  --warning: #d4a847;
+  --border: #1a2a2e;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+/* Active/selected items in Ramadan theme */
+.ramadan-theme .channel-row.active,
+.ramadan-theme .nav-item.active {
+  background: #2a3f3a;
+}
+
+.ramadan-theme .chip.solid,
+.ramadan-theme .voice-join-btn {
+  background: #c9a84c;
+  color: #0f1a1e;
+}
+
+.ramadan-theme .chip.solid:hover,
+.ramadan-theme .voice-join-btn:hover {
+  background: #d4b35a;
+}
+
+/* Gold-tinted scrollbar */
+.ramadan-theme ::-webkit-scrollbar-thumb {
+  background: #3a4a3e;
+}
+
+.ramadan-theme ::-webkit-scrollbar-thumb:hover {
+  background: #c9a84c;
+}
+
+/* Selection highlight */
+.ramadan-theme ::selection {
+  background: rgba(201, 168, 76, 0.3);
+}
+
+/* Gold accent on links */
+.ramadan-theme a {
+  color: #c9a84c;
+}
+
+/* Voice control buttons */
+.ramadan-theme .voice-ctrl-btn.sharing {
+  background: rgba(201, 168, 76, 0.2);
+  border-color: rgba(201, 168, 76, 0.4);
+}
+
+/* Sidebar header decoration when Ramadan theme is active */
+.ramadan-theme .sidebar-header {
+  border-bottom-color: rgba(201, 168, 76, 0.2);
+}
+
+/* Server rail accent */
+.ramadan-theme .server-btn.active {
+  background: rgba(201, 168, 76, 0.15);
+}
+
+.ramadan-theme .server-btn.active::before {
+  background: #c9a84c;
+}
+
+/* Profile card border */
+.ramadan-theme .profile-card {
+  border-top-color: rgba(201, 168, 76, 0.15);
+}
+
+/* Ramadan decorative elements */
+.ramadan-lantern {
+  display: none;
+}
+
+.ramadan-theme .ramadan-lantern {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c9a84c;
+  font-size: 13px;
+  padding: 4px 0;
+  opacity: 0.8;
+}
+
+.ramadan-theme .ramadan-lantern svg {
+  filter: drop-shadow(0 0 4px rgba(201, 168, 76, 0.4));
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
 }

@@ -25,7 +25,7 @@ from .auth import (
     verify_password,
 )
 from .db import Base, SessionLocal, engine, get_db
-from .models import Channel, ChannelCategory, DMChannelMember, Friendship, Message, Reaction, ReadReceipt, Server, ServerMembership, User
+from .models import Channel, ChannelCategory, DMChannelMember, Friendship, Message, Reaction, ReadReceipt, Server, ServerMembership, ServerTimeout, User
 from .schemas import (
     CategoryCreate,
     CategoryOut,
@@ -46,6 +46,8 @@ from .schemas import (
     ServerCreate,
     ServerOut,
     ServerUpdate,
+    TimeoutCreate,
+    TimeoutOut,
     Token,
     UserCreate,
     UserLogin,
@@ -222,6 +224,23 @@ def _run_migrations(eng):
             conn.execute(text("ALTER TABLE channels ALTER COLUMN server_id DROP NOT NULL"))
         else:
             print("[migrations] channels.server_id already nullable", flush=True)
+
+        # Ensure read_receipts.channel_id has ON DELETE CASCADE
+        try:
+            fk_name = conn.execute(text(
+                "SELECT constraint_name FROM information_schema.table_constraints "
+                "WHERE table_name = 'read_receipts' AND constraint_type = 'FOREIGN KEY' "
+                "AND constraint_name LIKE '%channel%'"
+            )).scalar()
+            if fk_name:
+                conn.execute(text(f"ALTER TABLE read_receipts DROP CONSTRAINT {fk_name}"))
+                conn.execute(text(
+                    "ALTER TABLE read_receipts ADD CONSTRAINT read_receipts_channel_id_fkey "
+                    "FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE"
+                ))
+                print("[migrations] Updated read_receipts.channel_id FK to CASCADE", flush=True)
+        except Exception:
+            pass  # Table may not exist yet (fresh DB)
 
         print("[migrations] Committing...", flush=True)
         conn.commit()
@@ -1060,6 +1079,162 @@ def kick_member(
     db.commit()
 
 
+# ── Server Timeouts ──────────────────────────────────────────────
+
+@app.post("/servers/{server_id}/timeout", response_model=TimeoutOut)
+def create_timeout(
+    server_id: str,
+    payload: TimeoutCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TimeoutOut:
+    require_membership(db, current_user.id, server_id)
+
+    requester_membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    ROLE_RANK = {"owner": 4, "admin": 3, "moderator": 2, "member": 1}
+    if ROLE_RANK.get(requester_membership.role, 0) < 3:
+        raise HTTPException(status_code=403, detail="Only admins and owners can timeout members")
+
+    target_membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == payload.user_id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    if not target_membership:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    if ROLE_RANK.get(target_membership.role, 0) >= ROLE_RANK.get(requester_membership.role, 0):
+        raise HTTPException(status_code=403, detail="Cannot timeout someone with equal or higher role")
+
+    # Remove any existing timeout for this user in this server
+    existing = db.scalar(
+        select(ServerTimeout).where(
+            (ServerTimeout.user_id == payload.user_id)
+            & (ServerTimeout.server_id == server_id)
+        )
+    )
+    if existing:
+        db.delete(existing)
+
+    expires_at = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=payload.duration_minutes)
+    timeout = ServerTimeout(
+        server_id=server_id,
+        user_id=payload.user_id,
+        timed_out_by=current_user.id,
+        reason=payload.reason,
+        expires_at=expires_at,
+    )
+    db.add(timeout)
+    db.commit()
+    db.refresh(timeout)
+
+    target_user = db.get(User, payload.user_id)
+    return TimeoutOut(
+        id=timeout.id,
+        server_id=timeout.server_id,
+        user_id=timeout.user_id,
+        username=target_user.username,
+        timed_out_by=timeout.timed_out_by,
+        reason=timeout.reason,
+        expires_at=timeout.expires_at.isoformat(),
+        created_at=timeout.created_at.isoformat(),
+    )
+
+
+@app.delete("/servers/{server_id}/timeout/{user_id}", status_code=204)
+def remove_timeout(
+    server_id: str,
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    require_membership(db, current_user.id, server_id)
+
+    requester_membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    ROLE_RANK = {"owner": 4, "admin": 3, "moderator": 2, "member": 1}
+    if ROLE_RANK.get(requester_membership.role, 0) < 3:
+        raise HTTPException(status_code=403, detail="Only admins and owners can remove timeouts")
+
+    timeout = db.scalar(
+        select(ServerTimeout).where(
+            (ServerTimeout.user_id == user_id)
+            & (ServerTimeout.server_id == server_id)
+        )
+    )
+    if not timeout:
+        raise HTTPException(status_code=404, detail="Timeout not found")
+
+    db.delete(timeout)
+    db.commit()
+
+
+@app.get("/servers/{server_id}/timeouts", response_model=list[TimeoutOut])
+def list_timeouts(
+    server_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[TimeoutOut]:
+    require_membership(db, current_user.id, server_id)
+
+    requester_membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    ROLE_RANK = {"owner": 4, "admin": 3, "moderator": 2, "member": 1}
+    if ROLE_RANK.get(requester_membership.role, 0) < 3:
+        raise HTTPException(status_code=403, detail="Only admins and owners can view timeouts")
+
+    now = dt.datetime.now(dt.timezone.utc)
+
+    # Delete expired timeouts
+    expired = db.scalars(
+        select(ServerTimeout).where(
+            (ServerTimeout.server_id == server_id)
+            & (ServerTimeout.expires_at <= now)
+        )
+    ).all()
+    for t in expired:
+        db.delete(t)
+    if expired:
+        db.commit()
+
+    # Fetch active timeouts
+    active = db.scalars(
+        select(ServerTimeout).where(
+            (ServerTimeout.server_id == server_id)
+            & (ServerTimeout.expires_at > now)
+        )
+    ).all()
+
+    result = []
+    for t in active:
+        user = db.get(User, t.user_id)
+        result.append(TimeoutOut(
+            id=t.id,
+            server_id=t.server_id,
+            user_id=t.user_id,
+            username=user.username if user else "Unknown",
+            timed_out_by=t.timed_out_by,
+            reason=t.reason,
+            expires_at=t.expires_at.isoformat(),
+            created_at=t.created_at.isoformat(),
+        ))
+    return result
+
+
 @app.get("/channels/{channel_id}/messages", response_model=list[MessageOut])
 def list_messages(
     channel_id: str,
@@ -1107,6 +1282,19 @@ def create_message(
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
     require_channel_access(db, current_user.id, channel)
+
+    # Enforce server timeout
+    if channel.server_id:
+        now = dt.datetime.now(dt.timezone.utc)
+        timeout = db.scalar(
+            select(ServerTimeout).where(
+                (ServerTimeout.user_id == current_user.id)
+                & (ServerTimeout.server_id == channel.server_id)
+                & (ServerTimeout.expires_at > now)
+            )
+        )
+        if timeout:
+            raise HTTPException(status_code=403, detail=f"You are timed out until {timeout.expires_at.isoformat()}")
 
     message = Message(
         channel_id=channel_id,
@@ -1178,6 +1366,19 @@ def create_message_with_attachment(
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
     require_channel_access(db, current_user.id, channel)
+
+    # Enforce server timeout
+    if channel.server_id:
+        now = dt.datetime.now(dt.timezone.utc)
+        timeout = db.scalar(
+            select(ServerTimeout).where(
+                (ServerTimeout.user_id == current_user.id)
+                & (ServerTimeout.server_id == channel.server_id)
+                & (ServerTimeout.expires_at > now)
+            )
+        )
+        if timeout:
+            raise HTTPException(status_code=403, detail=f"You are timed out until {timeout.expires_at.isoformat()}")
 
     if not payload.content.strip() and not payload.attachment_url:
         raise HTTPException(status_code=400, detail="Message must have content or attachment")
@@ -1428,6 +1629,19 @@ def create_voice_token(
 
     require_channel_access(db, current_user.id, channel)
 
+    # Enforce server timeout
+    if channel.server_id:
+        now = dt.datetime.now(dt.timezone.utc)
+        timeout = db.scalar(
+            select(ServerTimeout).where(
+                (ServerTimeout.user_id == current_user.id)
+                & (ServerTimeout.server_id == channel.server_id)
+                & (ServerTimeout.expires_at > now)
+            )
+        )
+        if timeout:
+            raise HTTPException(status_code=403, detail=f"You are timed out until {timeout.expires_at.isoformat()}")
+
     livekit_url, api_key, api_secret, ttl_minutes = _voice_config()
     if not livekit_url or not api_key or not api_secret:
         raise HTTPException(
@@ -1486,6 +1700,61 @@ async def voice_disconnect(
     ch_id = _remove_voice_occupant(current_user.id)
     if ch_id:
         await _broadcast_voice_occupants(ch_id)
+
+
+@app.post("/voice/kick", status_code=204)
+def voice_kick(
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    channel_id = body.get("channel_id")
+    target_user_id = body.get("user_id")
+    if not channel_id or not target_user_id:
+        raise HTTPException(status_code=400, detail="channel_id and user_id are required")
+
+    channel = db.get(Channel, channel_id)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    if channel.type != "voice":
+        raise HTTPException(status_code=400, detail="Channel is not a voice channel")
+
+    server_id = channel.server_id
+    require_membership(db, current_user.id, server_id)
+
+    requester_membership = db.scalar(
+        select(ServerMembership).where(
+            (ServerMembership.user_id == current_user.id)
+            & (ServerMembership.server_id == server_id)
+        )
+    )
+    ROLE_RANK = {"owner": 4, "admin": 3, "moderator": 2, "member": 1}
+    if ROLE_RANK.get(requester_membership.role, 0) < 2:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    # Remove from LiveKit room
+    room_name = f"voice-{channel.id}"
+    livekit_url, api_key, api_secret, _ = _voice_config()
+    if livekit_url and api_key and api_secret:
+        try:
+            from livekit import api as livekit_api
+
+            lk = livekit_api.LiveKitAPI(livekit_url, api_key, api_secret)
+            asyncio.get_event_loop().run_until_complete(
+                lk.room.remove_participant(
+                    livekit_api.RoomParticipantIdentity(
+                        room=room_name,
+                        identity=target_user_id,
+                    )
+                )
+            )
+        except Exception:
+            pass  # best-effort: user may already have left
+
+    # Remove from in-memory occupants and broadcast
+    ch_id = _remove_voice_occupant(target_user_id)
+    if ch_id:
+        _fire_and_forget(_broadcast_voice_occupants(ch_id))
 
 
 @app.get("/voice/occupants/{server_id}")

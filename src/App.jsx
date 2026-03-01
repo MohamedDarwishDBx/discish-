@@ -91,6 +91,17 @@ export default function App() {
   const lastTypingSentRef = useRef(0);
   const typingTimeoutsRef = useRef({});
   const [localScreenTrack, setLocalScreenTrack] = useState(null);
+  const audioElementsRef = useRef({});
+  const [ramadanTheme, setRamadanTheme] = useState(() => localStorage.getItem("discish_theme") === "ramadan");
+
+  /* ── Ramadan theme ── */
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("ramadan-theme", ramadanTheme);
+    localStorage.setItem("discish_theme", ramadanTheme ? "ramadan" : "default");
+  }, [ramadanTheme]);
+
+  const toggleTheme = () => setRamadanTheme((prev) => !prev);
 
   /* ── Auth ── */
 
@@ -149,6 +160,11 @@ export default function App() {
     return map;
   }, [members]);
 
+  const myMember = useMemo(
+    () => (user ? members.find((m) => m.id === user.id) : null),
+    [members, user]
+  );
+
   const displayMessages = useMemo(() => {
     const items = [];
     let lastDate = "";
@@ -181,6 +197,7 @@ export default function App() {
     setIsCameraOn(false);
     setLocalScreenTrack(null);
     clearAudioSink(audioSinkRef);
+    audioElementsRef.current = {};
     if (!options.keepError) setVoiceError("");
     if (token) api("/voice/disconnect", { method: "POST", token }).catch(() => {});
   };
@@ -226,6 +243,7 @@ export default function App() {
           el.playsInline = true;
           el.muted = voiceDeafenedRef.current;
           audioSinkRef.current?.appendChild(el);
+          audioElementsRef.current[participant.identity] = el;
         } else if (track.kind === Track.Kind.Video) {
           const el = track.attach();
           el.autoplay = true;
@@ -243,6 +261,7 @@ export default function App() {
       room.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
         if (track.kind === Track.Kind.Audio) {
           track.detach().forEach((e) => e.remove());
+          delete audioElementsRef.current[participant.identity];
         } else if (track.kind === Track.Kind.Video) {
           track.detach().forEach((e) => e.remove());
           if (track.source === Track.Source.ScreenShare) {
@@ -278,7 +297,7 @@ export default function App() {
           setLocalScreenTrack(null);
         } else if (pub.source === Track.Source.Camera) {
           setIsCameraOn(false);
-          if (pub.track) pub.track.detach().forEach((e) => e.remove());
+          if (pub.track) pub.track.detach();
           setVideoFeeds((prev) => prev.filter((v) => v.participantId !== room.localParticipant.identity));
         }
         updateMembers();
@@ -341,6 +360,13 @@ export default function App() {
     } catch (err) {
       setVoiceError(err.message || "Camera failed");
     }
+  };
+
+  const kickFromVoice = async (userId) => {
+    if (!voiceChannelId) return;
+    try {
+      await api("/voice/kick", { method: "POST", body: { channel_id: voiceChannelId, user_id: userId }, token });
+    } catch (err) { setVoiceError(err.message); }
   };
 
   useEffect(() => {
@@ -700,6 +726,12 @@ export default function App() {
               <button type="button" className="icon-btn" onClick={() => setShowChannelModal(true)}><PlusIcon size={18} /></button>
             ) : null}
           </div>
+          <div className="ramadan-lantern">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M12 2L9 5v1H8a2 2 0 0 0-2 2v6a4 4 0 0 0 8 0V8a2 2 0 0 0-2-2h-1V5l-3-3zm-2 6h4v6a2 2 0 1 1-4 0V8z"/>
+            </svg>
+            Ramadan Kareem
+          </div>
         </div>
 
         {activeServerId ? (
@@ -766,6 +798,8 @@ export default function App() {
           onToggleMute={toggleMute}
           onToggleDeafen={toggleDeafen}
           onClickProfile={() => setProfilePopupUser(user)}
+          ramadanTheme={ramadanTheme}
+          onToggleTheme={toggleTheme}
         />
       </aside>
 
@@ -847,17 +881,19 @@ export default function App() {
             voiceMuted={voiceMuted}
             voiceDeafened={voiceDeafened}
             voiceError={voiceError}
-            audioSinkRef={audioSinkRef}
             screenShares={screenShares}
             videoFeeds={videoFeeds}
             isScreenSharing={isScreenSharing}
             isCameraOn={isCameraOn}
+            audioElementsRef={audioElementsRef}
+            currentUserRole={myMember?.role}
             onJoin={() => connectVoiceChannel(activeChannel)}
             onLeave={disconnectVoice}
             onToggleMute={toggleMute}
             onToggleDeafen={toggleDeafen}
             onToggleScreenShare={toggleScreenShare}
             onToggleCamera={toggleCamera}
+            onKickParticipant={kickFromVoice}
           />
         ) : (
           <>
@@ -976,6 +1012,8 @@ export default function App() {
       {isScreenSharing && localScreenTrack ? (
         <PipPreview track={localScreenTrack} onStopSharing={toggleScreenShare} />
       ) : null}
+
+      <div ref={audioSinkRef} style={{ display: "none" }} />
     </div>
   );
 }

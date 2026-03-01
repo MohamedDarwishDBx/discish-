@@ -87,6 +87,9 @@ class Channel(Base):
     dm_members: Mapped[list["DMChannelMember"]] = relationship(
         back_populates="channel", cascade="all, delete-orphan"
     )
+    read_receipts: Mapped[list["ReadReceipt"]] = relationship(
+        back_populates="channel", cascade="all, delete-orphan"
+    )
 
 
 class ChannelCategory(Base):
@@ -174,3 +177,23 @@ class ReadReceipt(Base):
     last_read_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+    channel: Mapped["Channel"] = relationship(back_populates="read_receipts")
+
+
+class ServerTimeout(Base):
+    __tablename__ = "server_timeouts"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    server_id: Mapped[str] = mapped_column(ForeignKey("servers.id"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    timed_out_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    server: Mapped["Server"] = relationship()
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    issued_by: Mapped["User"] = relationship(foreign_keys=[timed_out_by])

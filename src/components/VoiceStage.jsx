@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { pickColor, initialsFromName } from "../utils/helpers";
-import { ScreenShareIcon, ScreenShareOffIcon, VideoIcon, VideoOffIcon } from "./Icons";
+import { ScreenShareIcon, ScreenShareOffIcon, VideoIcon, VideoOffIcon, HeadphonesIcon, DeafenIcon } from "./Icons";
 
 export default function VoiceStage({
   channelName,
@@ -12,17 +12,19 @@ export default function VoiceStage({
   voiceMuted,
   voiceDeafened,
   voiceError,
-  audioSinkRef,
   screenShares = [],
   videoFeeds = [],
   isScreenSharing = false,
   isCameraOn = false,
+  audioElementsRef,
+  currentUserRole,
   onJoin,
   onLeave,
   onToggleMute,
   onToggleDeafen,
   onToggleScreenShare,
   onToggleCamera,
+  onKickParticipant,
 }) {
   const speakingCount = voiceMembers.filter((p) => p.speaking).length;
   const anyoneStreaming = voiceMembers.some((p) => p.isScreenSharing);
@@ -101,13 +103,7 @@ export default function VoiceStage({
                 onClick={onToggleDeafen}
                 title={voiceDeafened ? "Undeafen" : "Deafen"}
               >
-                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                  {voiceDeafened ? (
-                    <path d="M3.63 3.63a1 1 0 0 1 1.41 0l15.56 15.56a1 1 0 0 1-1.41 1.41l-2.48-2.48A8 8 0 0 1 4 12V9a8 8 0 0 1 2.46-5.77L3.63 5.05a1 1 0 0 1 0-1.42ZM20 12v-1a8 8 0 0 0-14.32-4.9l1.41 1.42A6 6 0 0 1 18 11v1a6 6 0 0 1-.34 2l1.48 1.48c.54-1.06.86-2.25.86-3.48Zm-4 0a4 4 0 0 0-8 0v1.17l8 8V12Z" fill="currentColor" />
-                  ) : (
-                    <path d="M12 2a8 8 0 0 0-8 8v4a8 8 0 0 0 16 0v-4a8 8 0 0 0-8-8Zm-2 8a2 2 0 1 1 4 0v4a2 2 0 1 1-4 0v-4Z" fill="currentColor" />
-                  )}
-                </svg>
+                  {voiceDeafened ? <DeafenIcon size={20} /> : <HeadphonesIcon size={20} />}
               </button>
               <button
                 type="button"
@@ -143,7 +139,7 @@ export default function VoiceStage({
       {screenShares.length > 0 ? (
         <div className="screen-share-grid">
           {screenShares.map((share) => (
-            <ScreenShareTile key={share.participantId + "-screen"} share={share} />
+            <ScreenShareTile key={share.participantId + "-screen"} share={share} audioElementsRef={audioElementsRef} />
           ))}
         </div>
       ) : null}
@@ -157,19 +153,21 @@ export default function VoiceStage({
               key={participant.id}
               participant={participant}
               videoFeed={videoFeeds.find((v) => v.participantId === participant.id)}
+              currentUserRole={currentUserRole}
+              onKickParticipant={onKickParticipant}
             />
           ))
         )}
       </div>
 
-      <div ref={audioSinkRef} style={{ display: "none" }} />
     </section>
   );
 }
 
-function ScreenShareTile({ share }) {
+function ScreenShareTile({ share, audioElementsRef }) {
   const videoRef = useRef(null);
   const tileRef = useRef(null);
+  const [volume, setVolume] = useState(100);
 
   useEffect(() => {
     const container = videoRef.current;
@@ -187,12 +185,41 @@ function ScreenShareTile({ share }) {
     else el.requestFullscreen().catch(() => {});
   };
 
+  const handleVolumeChange = (e) => {
+    const val = Number(e.target.value);
+    setVolume(val);
+    const audioEl = audioElementsRef?.current?.[share.participantId];
+    if (audioEl) {
+      audioEl.volume = val / 100;
+    }
+  };
+
   return (
     <div className="screen-share-tile" ref={tileRef} onDoubleClick={goFullscreen}>
       <div className="screen-share-video-container" ref={videoRef} />
       <div className="screen-share-label">
         <span className="live-badge">LIVE</span>
         {share.participantName}&apos;s screen
+      </div>
+      <div className="volume-slider-container">
+        <svg className="volume-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          {volume === 0 ? (
+            <path d="M16.5 12A4.5 4.5 0 0 0 14 8v2.18l2.45 2.45a4.22 4.22 0 0 0 .05-.63Zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71ZM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3ZM12 4 9.91 6.09 12 8.18V4Z" fill="currentColor" />
+          ) : volume < 50 ? (
+            <path d="M3 10v4h4l5 5V5L7 10H3Zm13.5 2A4.5 4.5 0 0 0 14 8v8a4.47 4.47 0 0 0 2.5-4Z" fill="currentColor" />
+          ) : (
+            <path d="M3 10v4h4l5 5V5L7 10H3Zm13.5 2A4.5 4.5 0 0 0 14 8v8a4.47 4.47 0 0 0 2.5-4ZM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77Z" fill="currentColor" />
+          )}
+        </svg>
+        <input
+          type="range"
+          className="volume-slider"
+          min="0"
+          max="100"
+          value={volume}
+          onChange={handleVolumeChange}
+          title={`Volume: ${volume}%`}
+        />
       </div>
       <button type="button" className="fullscreen-btn" onClick={goFullscreen} title="Fullscreen">
         <svg viewBox="0 0 24 24" width="18" height="18"><path d="M7 14H5v5h5v-2H7v-3Zm-2-4h2V7h3V5H5v5Zm12 7h-3v2h5v-5h-2v3ZM14 5v2h3v3h2V5h-5Z" fill="currentColor" /></svg>
@@ -201,7 +228,7 @@ function ScreenShareTile({ share }) {
   );
 }
 
-function ParticipantCard({ participant, videoFeed }) {
+function ParticipantCard({ participant, videoFeed, currentUserRole, onKickParticipant }) {
   const videoRef = useRef(null);
   const cardRef = useRef(null);
   const hasVideo = !!videoFeed;
@@ -224,6 +251,18 @@ function ParticipantCard({ participant, videoFeed }) {
 
   return (
     <div ref={cardRef} className={`voice-participant-card ${participant.speaking ? "speaking" : ""} ${hasVideo ? "has-video" : ""} ${participant.isScreenSharing ? "is-streaming" : ""}`}>
+      {!participant.isYou && ["owner", "admin", "moderator"].includes(currentUserRole) && onKickParticipant ? (
+        <button
+          type="button"
+          className="voice-kick-btn"
+          title={`Kick ${participant.username}`}
+          onClick={(e) => { e.stopPropagation(); onKickParticipant(participant.id); }}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          </svg>
+        </button>
+      ) : null}
       {hasVideo ? (
         <div className="video-tile" ref={videoRef} onDoubleClick={goFullscreen}>
           <button type="button" className="fullscreen-btn" onClick={goFullscreen} title="Fullscreen">

@@ -11,11 +11,7 @@ export default function LandingPage({ onOpenApp }) {
 
       <nav className="landing-nav">
         <div className="landing-logo"><img src="/logo.png" alt="" className="landing-logo-icon" />Discish — Discord El Ghalaba 🇪🇬</div>
-        <div className="landing-links">
-          <a href="#features">Features</a>
-          <a href="#safety">Safety</a>
-          <a href="#support">Support</a>
-        </div>
+        <div className="landing-links" />
         <button type="button" className="landing-login-btn" onClick={onOpenApp}>
           Login
         </button>
