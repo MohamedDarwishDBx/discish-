@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const CONFETTI_COUNT = 80;
 const CONFETTI_COLORS = ["#e8a832", "#d44a3a", "#4caf50", "#3a8fd4", "#f5b742", "#ff6b9d", "#a855f7"];
@@ -8,12 +8,11 @@ function randomBetween(a, b) {
 }
 
 export default function RamadanPopup({ open, onClose }) {
-  const playerRef = useRef(null);
-  const timerRef = useRef(null);
   const [confetti, setConfetti] = useState([]);
+  const [showIframe, setShowIframe] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) { setShowIframe(false); return; }
     // Generate confetti pieces
     const pieces = Array.from({ length: CONFETTI_COUNT }, (_, i) => ({
       id: i,
@@ -26,62 +25,11 @@ export default function RamadanPopup({ open, onClose }) {
       type: Math.random() > 0.5 ? "circle" : "rect",
     }));
     setConfetti(pieces);
-  }, [open]);
-
-  // YouTube IFrame API
-  useEffect(() => {
-    if (!open) return;
-
-    // Load YouTube IFrame API if not present
-    if (!window.YT) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(tag);
-    }
-
-    const createPlayer = () => {
-      playerRef.current = new window.YT.Player("ramadan-yt-player", {
-        height: "0",
-        width: "0",
-        videoId: "A2b-CzPKtGw",
-        playerVars: { start: 25, autoplay: 1, controls: 0 },
-        events: {
-          onReady: (event) => {
-            event.target.setVolume(70);
-            event.target.playVideo();
-            // Stop at 43 seconds
-            timerRef.current = setInterval(() => {
-              if (event.target.getCurrentTime && event.target.getCurrentTime() >= 43) {
-                event.target.pauseVideo();
-                clearInterval(timerRef.current);
-              }
-            }, 300);
-          },
-        },
-      });
-    };
-
-    if (window.YT && window.YT.Player) {
-      createPlayer();
-    } else {
-      window.onYouTubeIframeAPIReady = createPlayer;
-    }
-
-    return () => {
-      clearInterval(timerRef.current);
-      if (playerRef.current?.destroy) {
-        playerRef.current.destroy();
-        playerRef.current = null;
-      }
-    };
+    setShowIframe(true);
   }, [open]);
 
   const handleClose = () => {
-    clearInterval(timerRef.current);
-    if (playerRef.current?.destroy) {
-      playerRef.current.destroy();
-      playerRef.current = null;
-    }
+    setShowIframe(false);
     onClose();
   };
 
@@ -132,12 +80,19 @@ export default function RamadanPopup({ open, onClose }) {
         <p className="ramadan-popup-subtitle">from Discish!</p>
         <div className="ramadan-popup-stars">&#x2728; &#x2B50; &#x2728;</div>
         <button type="button" className="ramadan-popup-btn" onClick={handleClose}>
-          Jazak Allah Khair
+          Allah Akram
         </button>
       </div>
 
-      {/* Hidden YT player */}
-      <div id="ramadan-yt-player" style={{ position: "absolute", top: -9999, left: -9999 }} />
+      {/* Hidden YouTube embed — autoplay with allow attribute bypasses browser restrictions */}
+      {showIframe && (
+        <iframe
+          src="https://www.youtube.com/embed/A2b-CzPKtGw?autoplay=1&start=25&end=43&controls=0&showinfo=0&rel=0"
+          allow="autoplay; encrypted-media"
+          style={{ position: "absolute", width: 1, height: 1, top: -9999, left: -9999, border: "none", opacity: 0 }}
+          title="Ramadan nasheed"
+        />
+      )}
     </div>
   );
 }
