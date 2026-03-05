@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 import MessageRow from "./MessageRow";
 
-const GROUP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+const GROUP_THRESHOLD_MS = 30 * 1000; // 30 seconds
 
 function shouldGroup(prev, curr) {
   if (!prev || prev.type === "divider" || !curr) return false;

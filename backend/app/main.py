@@ -1350,6 +1350,14 @@ import uuid as _uuid_mod
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".txt", ".zip", ".mp3", ".mp4"}
 
 
+def _cloudinary_configured() -> bool:
+    return bool(
+        os.getenv("CLOUDINARY_CLOUD_NAME")
+        and os.getenv("CLOUDINARY_API_KEY")
+        and os.getenv("CLOUDINARY_API_SECRET")
+    )
+
+
 @app.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
@@ -1366,11 +1374,28 @@ async def upload_file(
     if len(data) > MAX_UPLOAD_SIZE:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
 
-    unique_name = f"{_uuid_mod.uuid4().hex}{ext}"
-    dest = UPLOADS_DIR / unique_name
-    dest.write_bytes(data)
+    if _cloudinary_configured():
+        import cloudinary
+        import cloudinary.uploader
 
-    url = f"/uploads/{unique_name}"
+        cloudinary.config(
+            cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+            api_key=os.getenv("CLOUDINARY_API_KEY"),
+            api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+        )
+        result = cloudinary.uploader.upload(
+            data,
+            folder="discish",
+            resource_type="auto",
+            public_id=_uuid_mod.uuid4().hex,
+        )
+        url = result["secure_url"]
+    else:
+        unique_name = f"{_uuid_mod.uuid4().hex}{ext}"
+        dest = UPLOADS_DIR / unique_name
+        dest.write_bytes(data)
+        url = f"/uploads/{unique_name}"
+
     return {"url": url, "filename": file.filename}
 
 
