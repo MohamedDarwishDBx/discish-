@@ -2,29 +2,69 @@ import { useEffect, useState } from "react";
 
 const PRAYER_NAMES = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
+function dateStr() {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}-${mm}-${d.getFullYear()}`;
+}
+
 export default function PrayerCountdown({ compact }) {
   const [times, setTimes] = useState(null);
+  const [cityName, setCityName] = useState("Cairo");
   const [countdown, setCountdown] = useState("");
   const [nextLabel, setNextLabel] = useState("");
   const [showSchedule, setShowSchedule] = useState(false);
+  const [tz, setTz] = useState("Africa/Cairo");
 
   useEffect(() => {
-    const d = new Date();
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    fetch(`https://api.aladhan.com/v1/timingsByCity/${dd}-${mm}-${yyyy}?city=Cairo&country=Egypt&method=5`)
-      .then((r) => r.json())
-      .then((data) => setTimes(data.data.timings))
-      .catch(() => {});
+    const fetchByCoords = (lat, lng) => {
+      fetch(`https://api.aladhan.com/v1/timings/${dateStr()}?latitude=${lat}&longitude=${lng}&method=5`)
+        .then((r) => r.json())
+        .then((data) => {
+          setTimes(data.data.timings);
+          setTz(data.data.meta?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+        })
+        .catch(() => {});
+    };
+
+    const fetchByCairo = () => {
+      fetch(`https://api.aladhan.com/v1/timingsByCity/${dateStr()}?city=Cairo&country=Egypt&method=5`)
+        .then((r) => r.json())
+        .then((data) => {
+          setTimes(data.data.timings);
+          setTz("Africa/Cairo");
+          setCityName("Cairo");
+        })
+        .catch(() => {});
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          fetchByCoords(pos.coords.latitude, pos.coords.longitude);
+          // Try to get city name from reverse geocoding
+          fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
+            .then((r) => r.json())
+            .then((data) => {
+              const city = data.address?.city || data.address?.town || data.address?.village || data.address?.state || "";
+              if (city) setCityName(city);
+            })
+            .catch(() => {});
+        },
+        () => fetchByCairo(),
+        { timeout: 5000 },
+      );
+    } else {
+      fetchByCairo();
+    }
   }, []);
 
   useEffect(() => {
     if (!times) return;
 
     const tick = () => {
-      // Use Cairo timezone for correct comparison regardless of user's location
-      const nowStr = new Date().toLocaleString("en-US", { timeZone: "Africa/Cairo" });
+      const nowStr = new Date().toLocaleString("en-US", { timeZone: tz });
       const now = new Date(nowStr);
 
       const parseTime = (str) => {
@@ -62,7 +102,7 @@ export default function PrayerCountdown({ compact }) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [times]);
+  }, [times, tz]);
 
   if (!times) return null;
 
@@ -83,7 +123,7 @@ export default function PrayerCountdown({ compact }) {
 
       {showSchedule && (
         <div className="prayer-schedule">
-          <div className="prayer-schedule-title">Prayer Times — Cairo</div>
+          <div className="prayer-schedule-title">Prayer Times — {cityName}</div>
           {PRAYER_NAMES.map((name) => (
             <div key={name} className={`prayer-row ${name === "Maghrib" ? "highlight" : ""}`}>
               <span>{name}</span>

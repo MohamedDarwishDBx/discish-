@@ -22,7 +22,7 @@ function isImageUrl(url) {
   return IMAGE_EXTENSIONS.some((ext) => url.toLowerCase().endsWith(ext));
 }
 
-export default function MessageRow({ message, authorName, isOwn, currentUserId, currentUsername, onEdit, onDelete, onReact }) {
+export default function MessageRow({ message, authorName, isOwn, currentUserId, currentUsername, onEdit, onDelete, onReact, grouped }) {
   const [hovering, setHovering] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(message.content);
@@ -53,19 +53,25 @@ export default function MessageRow({ message, authorName, isOwn, currentUserId, 
 
   return (
     <div
-      className="message-row"
+      className={`message-row ${grouped ? "message-row-grouped" : ""}`}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => { setHovering(false); setShowPicker(false); }}
     >
-      <span className="avatar" style={{ background: pickColor(authorName) }}>
-        {initialsFromName(authorName)}
-      </span>
+      {grouped ? (
+        <span className="avatar-spacer" />
+      ) : (
+        <span className="avatar" style={{ background: pickColor(authorName) }}>
+          {initialsFromName(authorName)}
+        </span>
+      )}
       <div className="message-body">
-        <div className="message-meta">
-          <span className="message-author">{authorName}</span>
-          <span className="message-time">{formatTime(message.created_at)}</span>
-          {message.edited_at ? <span className="message-edited">(edited)</span> : null}
-        </div>
+        {!grouped && (
+          <div className="message-meta">
+            <span className="message-author">{authorName}</span>
+            <span className="message-time">{formatTime(message.created_at)}</span>
+            {message.edited_at ? <span className="message-edited">(edited)</span> : null}
+          </div>
+        )}
         {editing ? (
           <form className="message-edit-form" onSubmit={handleSaveEdit}>
             <input
@@ -108,6 +114,7 @@ export default function MessageRow({ message, authorName, isOwn, currentUserId, 
                 type="button"
                 className={`reaction-chip ${r.users?.includes(currentUserId) ? "active" : ""}`}
                 onClick={() => onReact(message.id, r.emoji)}
+                title={r.usernames?.join(", ") || ""}
               >
                 <span className="reaction-emoji">{r.emoji}</span>
                 <span className="reaction-count">{r.count}</span>

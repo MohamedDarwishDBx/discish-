@@ -634,6 +634,11 @@ input {
   font-size: 12px;
 }
 
+.form-success {
+  color: var(--success, #3ba55d);
+  font-size: 12px;
+}
+
 .app-shell {
   height: 100vh;
   display: grid;
@@ -1885,6 +1890,16 @@ input {
 
 .message-row:hover {
   background: rgba(255, 255, 255, 0.04);
+}
+
+.message-row-grouped {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+.avatar-spacer {
+  width: 40px;
+  flex-shrink: 0;
 }
 
 .message-body {
@@ -3823,11 +3838,11 @@ input {
 }
 
 .sidebar .prayer-schedule {
-  left: 10px;
-  right: 10px;
+  position: static;
   transform: none;
-  bottom: calc(100% + 6px);
-  top: auto;
+  margin-top: 6px;
+  box-shadow: none;
+  border-radius: 8px;
 }
 
 @keyframes prayer-dropdown-up {

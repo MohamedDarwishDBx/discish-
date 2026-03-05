@@ -1,13 +1,25 @@
 import { forwardRef } from "react";
 import MessageRow from "./MessageRow";
 
+const GROUP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+function shouldGroup(prev, curr) {
+  if (!prev || prev.type === "divider" || !curr) return false;
+  const prevAuthor = prev.author_id || prev.author?.id;
+  const currAuthor = curr.author_id || curr.author?.id;
+  if (prevAuthor !== currAuthor) return false;
+  const prevTime = new Date(prev.created_at).getTime();
+  const currTime = new Date(curr.created_at).getTime();
+  return currTime - prevTime < GROUP_THRESHOLD_MS;
+}
+
 const MessageList = forwardRef(function MessageList(
   { displayMessages, membersById, currentUserId, currentUsername, onEditMessage, onDeleteMessage, onReactMessage },
   ref,
 ) {
   return (
     <section className="messages" ref={ref}>
-      {displayMessages.map((message) => {
+      {displayMessages.map((message, idx) => {
         if (message.type === "divider") {
           return (
             <div key={message.id} className="date-divider">
@@ -21,6 +33,8 @@ const MessageList = forwardRef(function MessageList(
           membersById[message.author_id]?.username ||
           "Unknown";
 
+        const grouped = shouldGroup(displayMessages[idx - 1], message);
+
         return (
           <MessageRow
             key={message.id}
@@ -32,6 +46,7 @@ const MessageList = forwardRef(function MessageList(
             onEdit={onEditMessage}
             onDelete={onDeleteMessage}
             onReact={onReactMessage}
+            grouped={grouped}
           />
         );
       })}

@@ -19,10 +19,12 @@ from sqlalchemy.orm import Session
 
 from .auth import (
     create_access_token,
+    create_reset_token,
     get_current_user,
     get_password_hash,
     get_user_from_token,
     verify_password,
+    verify_reset_token,
 )
 from .db import Base, SessionLocal, engine, get_db
 from .models import Channel, ChannelCategory, DMChannelMember, Friendship, Message, Reaction, ReadReceipt, Server, ServerMembership, ServerTimeout, User
@@ -49,6 +51,8 @@ from .schemas import (
     TimeoutCreate,
     TimeoutOut,
     Token,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
     UserCreate,
     UserLogin,
     UserOut,
@@ -408,6 +412,30 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> Token:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token(user.id)
     return Token(access_token=token)
+
+
+@app.post("/auth/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.scalar(select(User).where(User.email == payload.email))
+    if not user:
+        # Don't reveal whether email exists — always return success
+        return {"message": "If that email is registered, a reset code has been sent."}
+    token = create_reset_token(user.id)
+    # In production this token would be emailed. For now, return it directly.
+    return {"message": "If that email is registered, a reset code has been sent.", "reset_token": token}
+
+
+@app.post("/auth/reset-password")
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    user_id = verify_reset_token(payload.token)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    user.hashed_password = get_password_hash(payload.new_password)
+    db.commit()
+    return {"message": "Password reset successfully"}
 
 
 @app.get("/users/me", response_model=UserOut)
@@ -1547,11 +1575,14 @@ def _aggregate_reactions(message: Message, db: Session) -> list[dict]:
     reactions = db.scalars(
         select(Reaction).where(Reaction.message_id == message.id)
     ).all()
-    grouped: dict[str, list[str]] = {}
+    grouped: dict[str, list[dict]] = {}
     for r in reactions:
-        grouped.setdefault(r.emoji, []).append(r.user_id)
+        user = db.get(User, r.user_id)
+        grouped.setdefault(r.emoji, []).append(
+            {"id": r.user_id, "username": user.username if user else "Unknown"}
+        )
     return [
-        {"emoji": emoji, "count": len(users), "users": users}
+        {"emoji": emoji, "count": len(users), "users": [u["id"] for u in users], "usernames": [u["username"] for u in users]}
         for emoji, users in grouped.items()
     ]
 
