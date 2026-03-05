@@ -9,7 +9,11 @@ export default function PrayerCountdown({ compact }) {
   const [showSchedule, setShowSchedule] = useState(false);
 
   useEffect(() => {
-    fetch("https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5")
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    fetch(`https://api.aladhan.com/v1/timingsByCity/${dd}-${mm}-${yyyy}?city=Cairo&country=Egypt&method=5`)
       .then((r) => r.json())
       .then((data) => setTimes(data.data.timings))
       .catch(() => {});
