@@ -98,6 +98,19 @@ export default function Composer({ value, onChange, onSubmit, onUpload, channelN
     onSubmit(e);
   };
 
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) setPendingFile(file);
+        return;
+      }
+    }
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
@@ -153,6 +166,7 @@ export default function Composer({ value, onChange, onSubmit, onUpload, channelN
             value={value}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={`Message #${channelName || ""}`}
           />
         </div>
