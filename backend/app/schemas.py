@@ -117,6 +117,7 @@ class ReactionSummary(BaseModel):
     emoji: str
     count: int
     users: list[str]
+    usernames: list[str] = []
 
 
 class MessageOut(BaseModel):
@@ -155,6 +156,7 @@ class ReactionOut(BaseModel):
     emoji: str
     count: int
     users: list[str]
+    usernames: list[str] = []
 
 
 class DMChannelCreate(BaseModel):
