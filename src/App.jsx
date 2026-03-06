@@ -560,8 +560,12 @@ export default function App() {
     };
   }, [activeChannelId, isVoiceChannel, token]);
 
+  const prevMsgCountRef = useRef(0);
   useEffect(() => {
-    if (messageListRef.current) messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    if (messageListRef.current && messages.length !== prevMsgCountRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    }
+    prevMsgCountRef.current = messages.length;
   }, [messages]);
 
   /* ── Voice lifecycle ── */

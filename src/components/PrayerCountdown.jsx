@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const PRAYER_NAMES = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
+const ADHAN_PRAYERS = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
 function dateStr() {
   const d = new Date();
@@ -16,6 +17,10 @@ export default function PrayerCountdown({ compact }) {
   const [nextLabel, setNextLabel] = useState("");
   const [showSchedule, setShowSchedule] = useState(false);
   const [tz, setTz] = useState("Africa/Cairo");
+  const [adhanPlaying, setAdhanPlaying] = useState(false);
+  const [adhanPrayer, setAdhanPrayer] = useState("");
+  const playedRef = useRef(new Set());
+  const adhanAudioRef = useRef(null);
 
   useEffect(() => {
     const fetchByCoords = (lat, lng) => {
@@ -97,12 +102,53 @@ export default function PrayerCountdown({ compact }) {
       const s = Math.floor((diff % 60000) / 1000);
       setCountdown(`${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
       setNextLabel(label);
+
+      // Check if any prayer time is now — play adhan
+      for (const name of ADHAN_PRAYERS) {
+        const pt = parseTime(times[name]);
+        const elapsed = now - pt;
+        if (elapsed >= 0 && elapsed < 30000 && !playedRef.current.has(name)) {
+          playedRef.current.add(name);
+          if (adhanAudioRef.current) {
+            adhanAudioRef.current.pause();
+            adhanAudioRef.current = null;
+          }
+          const audio = new Audio("/adhan.mp3");
+          audio.volume = 0.8;
+          audio.play().catch(() => {});
+          audio.addEventListener("ended", () => {
+            setAdhanPlaying(false);
+            setAdhanPrayer("");
+            adhanAudioRef.current = null;
+          });
+          adhanAudioRef.current = audio;
+          setAdhanPlaying(true);
+          setAdhanPrayer(name);
+          break;
+        }
+      }
     };
 
+    playedRef.current = new Set();
     tick();
     const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      if (adhanAudioRef.current) {
+        adhanAudioRef.current.pause();
+        adhanAudioRef.current = null;
+      }
+    };
   }, [times, tz]);
+
+  const stopAdhan = () => {
+    if (adhanAudioRef.current) {
+      adhanAudioRef.current.pause();
+      adhanAudioRef.current = null;
+    }
+    setAdhanPlaying(false);
+    setAdhanPrayer("");
+  };
 
   if (!times) return null;
 
@@ -120,6 +166,15 @@ export default function PrayerCountdown({ compact }) {
         </div>
         <span className="prayer-chevron">{showSchedule ? "▲" : "▼"}</span>
       </button>
+
+      {adhanPlaying && (
+        <div className="adhan-banner">
+          <span className="adhan-label">🔊 {adhanPrayer} Adhan</span>
+          <button type="button" className="adhan-stop-btn" onClick={stopAdhan}>
+            Stop
+          </button>
+        </div>
+      )}
 
       {showSchedule && (
         <div className="prayer-schedule">

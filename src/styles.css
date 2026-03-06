@@ -3797,6 +3797,44 @@ input {
   font-weight: 600;
 }
 
+.adhan-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(232, 168, 50, 0.15);
+  border: 1px solid rgba(232, 168, 50, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  animation: adhan-pulse 2s ease-in-out infinite;
+}
+
+@keyframes adhan-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.adhan-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e8a832;
+}
+
+.adhan-stop-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: var(--text-normal, #f2f3f5);
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.adhan-stop-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .prayer-row span:last-child {
   font-family: "JetBrains Mono", monospace;
   font-variant-numeric: tabular-nums;
