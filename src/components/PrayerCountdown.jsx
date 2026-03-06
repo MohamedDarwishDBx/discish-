@@ -44,24 +44,41 @@ export default function PrayerCountdown({ compact }) {
         .catch(() => {});
     };
 
+    const fetchByIP = () => {
+      fetch("https://ipapi.co/json/")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.latitude && data.longitude) {
+            fetchByCoords(data.latitude, data.longitude);
+            if (data.city) setCityName(data.city);
+          } else {
+            fetchByCairo();
+          }
+        })
+        .catch(() => fetchByCairo());
+    };
+
+    const resolveCity = (lat, lng) => {
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`)
+        .then((r) => r.json())
+        .then((data) => {
+          const city = data.address?.city || data.address?.town || data.address?.village || data.address?.state || "";
+          if (city) setCityName(city);
+        })
+        .catch(() => {});
+    };
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           fetchByCoords(pos.coords.latitude, pos.coords.longitude);
-          // Try to get city name from reverse geocoding
-          fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
-            .then((r) => r.json())
-            .then((data) => {
-              const city = data.address?.city || data.address?.town || data.address?.village || data.address?.state || "";
-              if (city) setCityName(city);
-            })
-            .catch(() => {});
+          resolveCity(pos.coords.latitude, pos.coords.longitude);
         },
-        () => fetchByCairo(),
+        () => fetchByIP(),
         { timeout: 5000 },
       );
     } else {
-      fetchByCairo();
+      fetchByIP();
     }
   }, []);
 
