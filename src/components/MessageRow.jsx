@@ -114,10 +114,12 @@ export default function MessageRow({ message, authorName, isOwn, currentUserId, 
                 type="button"
                 className={`reaction-chip ${r.users?.includes(currentUserId) ? "active" : ""}`}
                 onClick={() => onReact(message.id, r.emoji)}
-                title={r.usernames?.join(", ") || ""}
               >
                 <span className="reaction-emoji">{r.emoji}</span>
                 <span className="reaction-count">{r.count}</span>
+                {r.usernames?.length ? (
+                  <span className="reaction-tooltip">{r.usernames.join(", ")}</span>
+                ) : null}
               </button>
             ))}
           </div>

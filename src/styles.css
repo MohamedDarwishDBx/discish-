@@ -2139,6 +2139,29 @@ input {
   background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.reaction-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111214;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.reaction-chip:hover .reaction-tooltip {
+  display: block;
 }
 
 .reaction-chip:hover {
